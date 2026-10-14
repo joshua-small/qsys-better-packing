@@ -53,7 +53,7 @@ public sealed class PackingModule : ModModule
     }
     private static string Title(PackAlignment value) => value == PackAlignment.VerticalCenter ? "Vertical Pack Center" : "Pack " + value;
     private void Pack(PackAlignment alignment, object? canvas = null, string invocation = "operation-window")
-        => SelectionPacker.Pack(alignment, settings!.Value.Gap, (kind, detail) => Host.Receipt("better-packing", kind, detail), canvas, invocation);
+        => SelectionPacker.Pack(alignment, settings!.Value.Gap, (kind, detail) => Host.RequiredReceipt("better-packing", kind, detail), canvas, invocation);
     private void Show()
     {
         if (operation is not null) { operation.Activate(); return; }
