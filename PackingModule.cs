@@ -39,6 +39,7 @@ public sealed class PackingModule : ModModule
             var command = Commands.Native("Pack" + alignment);
             if (main.CommandBindings.Cast<CommandBinding>().Count(b => ReferenceEquals(b.Command, command)) != 1)
                 throw new InvalidOperationException("Expected one native packing binding: " + command.Name);
+            Commands.RegisterNativeAlias("better-packing/" + alignment.ToString().ToLowerInvariant(), command);
             var selected = alignment;
             ModControls.RegisterReplacement(new("better-packing/replace-" + alignment.ToString().ToLowerInvariant(),
                 "better-packing", "Better Packing", "1", Commands.NativeId(command), Title(alignment),
@@ -53,7 +54,7 @@ public sealed class PackingModule : ModModule
                 }, canvas => Pack(selected, canvas, "native-command: " + command.Name));
         }
         Commands.Register(new("better-packing/window", "Better Packing…", "Better Packing", Show, () => true, InMenu: true));
-        foreach (var alignment in Enum.GetValues<PackAlignment>())
+        foreach (var alignment in new[] { PackAlignment.Center, PackAlignment.VerticalCenter })
         {
             var selected = alignment;
             Commands.Register(new("better-packing/" + alignment.ToString().ToLowerInvariant(), Title(alignment), "Better Packing",
