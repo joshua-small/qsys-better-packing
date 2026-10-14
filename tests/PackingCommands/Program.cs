@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Designer.Modules.BetterPacking;
+using QsysMods.Core;
 
 internal static class Program
 {
@@ -29,15 +30,18 @@ internal static class Program
         }
         var other = new RoutedCommand("Unrelated", typeof(Program));
         root.CommandBindings.Add(new CommandBinding(other, (_, _) => native++, (_, e) => e.CanExecute = true));
-        var router = new PackingCommandRouter(root, commands,
-            () => new(focus, canvas), _ => eligible,
-            (alignment, target, _) =>
+        var replacements = commands.Select(pair => new CommandReplacement(
+            new("packing/" + pair.Value, "better-packing", "Better Packing", "1", pair.Key.Name, pair.Key.Name, "Schematic", Scope: ControlScope.Schematic), pair.Key,
+            () => new(focus == PackingFocus.OtherCanvas ? ReplacementAvailability.OutsideScope
+                : focus == PackingFocus.Schematic && eligible ? ReplacementAvailability.Ready : ReplacementAvailability.Blocked, canvas),
+            target =>
             {
                 if (!ReferenceEquals(canvas, target)) throw new Exception("Wrong canvas");
                 if (fail) throw new ArgumentException("Invalid gap");
                 custom++;
-                last = alignment;
-            }, _ => errors++);
+                last = pair.Value;
+            })).ToArray();
+        var router = new ReplacementRouter(root, () => replacements, _ => errors++);
         void Check(string name, Action action)
         {
             action();

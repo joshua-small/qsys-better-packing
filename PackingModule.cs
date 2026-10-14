@@ -6,49 +6,52 @@ using QsysMods.Core;
 
 namespace Designer.Modules.BetterPacking;
 
-public sealed record PackingSettings(int Gap = 20, bool ReplaceDefaultPackBehavior = true);
+public sealed record PackingSettings(int Gap = 20, bool ReplaceDefaultPackBehavior = true, bool ControlsManagedByCore = false);
 public sealed class PackingModule : ModModule
 {
     private ModSettings<PackingSettings>? settings;
-    private PackingCommandRouter? router;
     private Window? operation;
     public PackingModule() => Mods.Register("better-packing", Initialize);
     private void Initialize(Window main)
     {
-        settings = Preferences.Register("better-packing", "Better Packing", () => new PackingSettings(), value =>
+        var store = new SettingsStore(Preferences.PathName);
+        var old = store.Contains("better-packing") ? store.Read("better-packing", () => new PackingSettings()) : null;
+        settings = Preferences.Register("better-packing", "Better Packing", () => new PackingSettings(ControlsManagedByCore: true), value =>
         {
             var panel = new StackPanel { Margin = new Thickness(16) };
             panel.Children.Add(new TextBlock { Text = "Gap (schematic units)", Margin = new Thickness(0,0,0,6) });
             var gap = new TextBox { Text = value.Gap.ToString(), Width = 100, HorizontalAlignment = HorizontalAlignment.Left };
-            var replace = new CheckBox { Content = "Replace Default Pack Behavior", IsChecked = value.ReplaceDefaultPackBehavior, Margin = new Thickness(0,16,0,8) };
-            panel.Children.Add(gap); panel.Children.Add(replace);
-            panel.Children.Add(new TextBlock { Text = "Use improved packing for schematic keyboard shortcuts, Tools > Pack, and right-click Pack actions. UCI packing keeps its native behavior.", TextWrapping = TextWrapping.Wrap });
-            return new PreferenceEditor<PackingSettings>(panel, () => int.TryParse(gap.Text, out var number) ? new(number, replace.IsChecked == true) : throw new ArgumentException("Gap must be a whole number."));
+            panel.Children.Add(gap);
+            var review = new Button { Content = "Review packing replacements…", Margin = new Thickness(0,16,0,8), Padding = new Thickness(8), HorizontalAlignment = HorizontalAlignment.Left };
+            review.Click += (_, _) => Preferences.SelectPage(panel, "mod-controls"); panel.Children.Add(review);
+            panel.Children.Add(new TextBlock { Text = "Choose replacements in Mod Controls. Approved replacements use your existing Pack shortcuts, Tools > Pack, and right-click Pack. UCI packing stays native.", TextWrapping = TextWrapping.Wrap });
+            return new PreferenceEditor<PackingSettings>(panel, () => int.TryParse(gap.Text, out var number) ? new(number, value.ReplaceDefaultPackBehavior, true) : throw new ArgumentException("Gap must be a whole number."));
         }, value => { if (value.Gap is < 0 or > 10000) throw new ArgumentException("Gap must be between 0 and 10000."); });
-        var natives = new Dictionary<RoutedCommand, PackAlignment>();
         foreach (var alignment in new[] { PackAlignment.Left, PackAlignment.Right, PackAlignment.Top, PackAlignment.Bottom })
         {
             var command = Commands.Native("Pack" + alignment);
             if (main.CommandBindings.Cast<CommandBinding>().Count(b => ReferenceEquals(b.Command, command)) != 1)
                 throw new InvalidOperationException("Expected one native packing binding: " + command.Name);
-            natives.Add(command, alignment);
+            var selected = alignment;
+            ModControls.RegisterReplacement(new("better-packing/replace-" + alignment.ToString().ToLowerInvariant(),
+                "better-packing", "Better Packing", "1", Commands.NativeId(command), Title(alignment),
+                "Schematic canvas; valid unlocked selection. UCI packing stays native.", Scope: ControlScope.Schematic), command,
+                () =>
+                {
+                    var context = ReadContext(main);
+                    return new(context.Focus == PackingFocus.OtherCanvas ? ReplacementAvailability.OutsideScope
+                        : context.Focus == PackingFocus.Schematic && context.Canvas is { } canvas && Host.Enabled && SelectionPacker.CanPackOn(canvas)
+                            ? ReplacementAvailability.Ready : ReplacementAvailability.Blocked, context.Canvas);
+                }, canvas => Pack(selected, canvas, "native-command: " + command.Name),
+                old is { ControlsManagedByCore: false } ? old.ReplaceDefaultPackBehavior : null);
         }
-        void Configure()
-        {
-            router?.Dispose(); router = null;
-            if (settings.Value.ReplaceDefaultPackBehavior)
-                router = new(main, natives, () => ReadContext(main), canvas => Host.Enabled && SelectionPacker.CanPackOn(canvas),
-                    (alignment, canvas, name) => Pack(alignment, canvas, "native-command: " + name), error => Host.Error("better-packing", error, true));
-        }
-        Configure(); settings.Changed += Configure;
-        main.Closed += (_, _) => { router?.Dispose(); settings.Changed -= Configure; };
         Commands.Register(new("better-packing/window", "Better Packing…", "Better Packing", Show, () => true, InMenu: true));
         foreach (var alignment in Enum.GetValues<PackAlignment>())
         {
             var selected = alignment;
             Commands.Register(new("better-packing/" + alignment.ToString().ToLowerInvariant(), Title(alignment), "Better Packing",
                 () => Pack(selected, ReadContext(main).Canvas, "registered-command"),
-                () => ReadContext(main) is { Focus: PackingFocus.Schematic, Canvas: { } canvas } && SelectionPacker.CanPackOn(canvas)));
+                () => ReadContext(main) is { Focus: PackingFocus.Schematic, Canvas: { } canvas } && SelectionPacker.CanPackOn(canvas)) { When = "Schematic canvas; valid unlocked selection" });
         }
     }
     private static string Title(PackAlignment value) => value == PackAlignment.VerticalCenter ? "Vertical Pack Center" : "Pack " + value;
