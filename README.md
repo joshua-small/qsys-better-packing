@@ -10,7 +10,7 @@ Versions before 0.1.3 registered four extra, identically named directional actio
 
 Migration preserves a saved legacy opt-out or a previous all-off selection. A partial per-direction selection becomes the default all-on group. An explicit competing mod choice is preserved; re-enabling Packing then offers overwrite confirmation for the entire group. Original per-action records remain as history and no longer control this group.
 
-Requires [Q-SYS Mods Core](https://github.com/joshua-small/qsys-mods-core) **0.1.3 or newer within 0.1.x** and the exact supported Designer 10.5 build. Deploy the matching Core/Packing/Shortcuts test builds together. Current signed package policy predates the new API minimum; it must be updated before public release. Use Mod Manager 0.8+ and its bundle migration; do not enable beside Schematic Tools 0.16 or earlier.
+Better Packing **0.2.0** requires [Q-SYS Mods Core](https://github.com/joshua-small/qsys-mods-core) **0.1.6 or newer within 0.1.x** and the exact supported Designer 10.5 build. The package and signed catalog enforce this dependency; Better Shortcuts remains optional. The 0.2 release range preserves the immutable dependency policy and pins of earlier 0.1.x packages. Use Mod Manager 0.8+ and its bundle migration; do not enable beside Schematic Tools 0.16 or earlier.
 
 ## Development
 
