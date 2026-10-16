@@ -1,7 +1,8 @@
 namespace Designer.Modules.BetterPacking;
 
 internal enum PackAlignment { Left, Center, Right, Top, VerticalCenter, Bottom }
-internal sealed record PackingItem(int Id, double X, double Y, double Width, double Height, bool IsInternalConnector = false);
+internal sealed record PackingItem(int Id, double X, double Y, double Width, double Height, bool IsInternalConnector = false,
+    double OffsetX = 0, double OffsetY = 0);
 internal sealed record PackedPosition(int Id, double X, double Y);
 
 /// <summary>Pure coordinate planning using each item's drawn bounds, including exposed control pins.</summary>
@@ -26,7 +27,7 @@ internal static class PackingLayout
         {
             var transposedAlignment = alignment == PackAlignment.Top ? PackAlignment.Left
                 : alignment == PackAlignment.Bottom ? PackAlignment.Right : PackAlignment.Center;
-            return Plan(items.Select(i => new PackingItem(i.Id, i.Y, i.X, i.Height, i.Width, i.IsInternalConnector)).ToArray(),
+            return Plan(items.Select(i => new PackingItem(i.Id, i.Y, i.X, i.Height, i.Width, i.IsInternalConnector, i.OffsetY, i.OffsetX)).ToArray(),
                 transposedAlignment, gap).Select(p => new PackedPosition(p.Id, p.Y, p.X)).ToArray();
         }
         if (!Enum.IsDefined(alignment)) throw new ArgumentOutOfRangeException(nameof(alignment));
@@ -36,19 +37,21 @@ internal static class PackingLayout
             throw new ArgumentException("Duplicate packing identities.");
         foreach (var item in items)
             if (!Coordinate(item.X) || !Coordinate(item.Y) || !double.IsFinite(item.Width)
-                || !double.IsFinite(item.Height) || item.Width <= 0 || item.Height <= 0)
+                || !double.IsFinite(item.Height) || item.Width <= 0 || item.Height <= 0
+                || !double.IsFinite(item.OffsetX) || !double.IsFinite(item.OffsetY)
+                || item.X + item.OffsetX < 0 || item.Y + item.OffsetY < 0)
                 throw new ArgumentException("Items need valid whole-unit positions and positive drawn sizes.");
 
         // All alignments keep the same top-to-bottom order, breaking ties left-to-right.
-        var ordered = items.OrderBy(i => i.Y).ThenBy(i => i.X).ThenBy(i => i.Id).ToArray();
+        var ordered = items.OrderBy(i => i.Y + i.OffsetY).ThenBy(i => i.X + i.OffsetX).ThenBy(i => i.Id).ToArray();
         var anchor = alignment switch
         {
-            PackAlignment.Left => items.Min(i => i.X),
-            PackAlignment.Center => items.Average(i => i.X + i.Width / 2),
-            PackAlignment.Right => items.Max(i => i.X + i.Width),
+            PackAlignment.Left => items.Min(i => i.X + i.OffsetX),
+            PackAlignment.Center => items.Average(i => i.X + i.OffsetX + i.Width / 2),
+            PackAlignment.Right => items.Max(i => i.X + i.OffsetX + i.Width),
             _ => throw new ArgumentOutOfRangeException(nameof(alignment))
         };
-        var y = items.Min(i => i.Y);
+        var drawnY = items.Min(i => i.Y + i.OffsetY);
         var result = new List<PackedPosition>();
         PackingItem? previous = null;
         foreach (var item in ordered)
@@ -56,15 +59,18 @@ internal static class PackingLayout
             // Flush internal connectors to each other, preserving the configured
             // clearance at connector/component boundaries and between components.
             if (previous is not null)
-                y = Math.Ceiling(y + previous.Height
-                    + (previous.IsInternalConnector && item.IsInternalConnector ? 0 : gap));
-            var x = anchor - (alignment == PackAlignment.Left ? 0 :
+                drawnY += previous.Height + (previous.IsInternalConnector && item.IsInternalConnector ? 0 : gap);
+            // Round the model coordinate upward so fractional polygon origins cannot
+            // reduce the requested visible gap. The host stores whole-unit positions.
+            var y = Math.Ceiling(drawnY - item.OffsetY);
+            var x = anchor - item.OffsetX - (alignment == PackAlignment.Left ? 0 :
                 alignment == PackAlignment.Center ? item.Width / 2 : item.Width);
             // Match the host's nonnegative whole-unit position setter; do not silently clamp.
             x = Math.Floor(x + 0.5);
             if (!Coordinate(x) || !Coordinate(y))
                 throw new ArgumentException("Packing would move an item outside the supported coordinate range. Nothing moved.");
             result.Add(new PackedPosition(item.Id, x, y));
+            drawnY = y + item.OffsetY;
             previous = item;
         }
         return result.ToArray();

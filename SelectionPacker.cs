@@ -7,7 +7,7 @@ namespace Designer.Modules.BetterPacking;
 
 internal static class SelectionPacker
 {
-    private sealed record Item(object Model, Point Position, Size Body, Size Drawn, bool IsInternalConnector);
+    private sealed record Item(object Model, Point Position, Size Body, Size Drawn, bool IsInternalConnector, Vector DrawnOffset);
 
     internal static PackingEditor EditorForCanvas(object canvas) => HostSelection.IsSchematicCanvas(canvas)
         ? PackingEditor.Schematic : HostSelection.RequiredProperty(canvas, "IsUciPage") is true ? PackingEditor.Uci : PackingEditor.Other;
@@ -62,8 +62,16 @@ internal static class SelectionPacker
             var drawn = (Size)HostSelection.RequiredProperty(graphic, "Size");
             if (graphicPosition != position || !PackingLayout.FootprintIsReady(body.Width, body.Height, drawn.Width, drawn.Height))
                 throw new InvalidOperationException("The drawn item geometry is not ready or uses a different coordinate space. Nothing moved.");
+            var offset = new Vector();
+            if (PackingPolicy.Classify(model.GetType()) == PackingElement.Shape)
+            {
+                var bounds = (Rect)HostSelection.RequiredProperty(graphic, "rc");
+                if (bounds.IsEmpty || bounds.Size != drawn || !double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y))
+                    throw new InvalidOperationException("The polygon bounds are not ready. Nothing moved.");
+                offset = bounds.Location - position;
+            }
             result.Add(new Item(model, position, body, drawn,
-                HostSelection.HostType("QSC.QSys.Design.ContainerPin").IsInstanceOfType(model)));
+                HostSelection.HostType("QSC.QSys.Design.ContainerPin").IsInstanceOfType(model), offset));
         }
         return result.ToArray();
     }
@@ -76,6 +84,7 @@ internal static class SelectionPacker
         position = new { x = item.Position.X, y = item.Position.Y },
         bodySize = new { width = item.Body.Width, height = item.Body.Height },
         drawnSize = new { width = item.Drawn.Width, height = item.Drawn.Height },
+        drawnOffset = new { x = item.DrawnOffset.X, y = item.DrawnOffset.Y },
         extraDrawnHeight = item.Drawn.Height - item.Body.Height
     };
 
@@ -97,13 +106,13 @@ internal static class SelectionPacker
     {
         var items = ReadItems(expectedCanvas);
         var plan = PackingLayout.Plan(items.Select((c, i) =>
-            new PackingItem(i, c.Position.X, c.Position.Y, c.Drawn.Width, c.Drawn.Height, c.IsInternalConnector)).ToArray(), alignment, gap);
+            new PackingItem(i, c.Position.X, c.Position.Y, c.Drawn.Width, c.Drawn.Height, c.IsInternalConnector, c.DrawnOffset.X, c.DrawnOffset.Y)).ToArray(), alignment, gap);
         var targets = plan.Select(p => (items[p.Id].Model, new Point(p.X, p.Y))).ToArray();
         return HostSelection.ApplyPositions(targets, "pack", new
         {
             alignment = alignment.ToString(), gap, invocation,
             connectorGap = 0, gapRule = "Zero between adjacent internal connectors; configured gap for every other pair",
-            footprint = "Native Graphic.Object.Size; component control-pin drawers included; Popup Button body only",
+            footprint = "Native Graphic.Object.Size; polygon rc origin; component control-pin drawers included; Popup Button body only",
             components = items.Select(Describe).ToArray()
         }, $"Packed {items.Length} items {alignment.ToString().ToLowerInvariant()}. Gap: {gap}; zero between input/output connectors.", receipt);
     }

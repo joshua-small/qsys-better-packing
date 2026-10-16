@@ -22,10 +22,10 @@ Base-family matches include derived types.
 | Text blocks | `Graphics.TextBlock` |
 | Group boxes | `Graphics.GroupBox` |
 | Images | `GraphicImage` |
-| Regions | `Graphics.Region` |
+| Polygons | `Graphics.Region` |
 
-`ControllerControlStyle` derives from `ControlStyle`, covering controls copied
-from components. Each accepted model must have exactly one selected
+`ControlStyle` includes component-bound controls; `ControllerControlStyle`
+derives from it and is also classified as a control. Each accepted model must have exactly one selected
 `Graphic.Object` instance with the same model identity. Its current drawn
 position must equal its model position, and both body and drawn sizes must be
 finite, positive and consistent with host rounding. The selection must share
@@ -42,7 +42,13 @@ Other unlisted elements also remain native rather than being admitted through
 the generic `Design.Object` base.
 
 The planner uses the existing drawn width/height contract and whole-unit host
-rounding. A single Core `HostSelection.ApplyPositions` transaction applies the
+rounding. Polygons (`Graphics.Region`) additionally use `Graphic.Region.rc`
+for their drawn origin: polygon vertices can be offset from the stored model
+position. The planner retains that offset, including fractional offsets, while
+rounding model positions to whole units. It rounds clearance upward so the
+visible gap is at least the requested value and less than one unit larger;
+alignment remains within half a unit. Vertices are not changed.
+A single Core `HostSelection.ApplyPositions` transaction applies the
 whole plan. It preserves object identity and changes positions only; control
 bindings, labels and values are not edited. Existing connector pairs remain
 flush. Geometry or execution failures are blocked and never fall through to a
@@ -60,12 +66,27 @@ No vendor binary or decompiled source is included in this repository.
 The automated suites exercise the production policy/reader/planner against
 fixture objects and actual WPF routed events. They do not exercise native
 Designer type construction, input focus, the host undo manager or file saving.
-Before release, verify representative copied controls, each graphic family,
-mixed types, both editor columns and nested schematics on a disposable design.
-Check all six native menu operations, custom/default keys, center-key migration,
-the master switch, save/reopen of preferences, Cancel, grouped undo/redo and
-design save/reopen. Retain prior component/drawer/connector behavior. Do not
-extend these checks to a connected Core without an explicitly scoped target.
+For 0.2.1, a separate hash-matched Designer 10.5 copy with a redirected profile
+passed 86 native assertions. They exercised headers, text blocks, group boxes,
+images, polygons with different fractional vertex offsets, and component-bound
+`ControlStyle` instances on schematic and UCI canvases. All six directions
+retained the requested visible gap (with host rounding), one-step undo/redo,
+control bindings and polygon vertices. Fifteen category choices loaded with
+the accepted defaults; Cancel preserved settings; OK/reopen retained changes.
+All six real routed schematic commands used native zero-gap packing by default
+and the configured gap after opt-in. The disposable design was saved through
+Designer and reopened in a fresh isolated process with the same object
+positions/sizes, control bindings and polygon vertices; preferences also
+persisted across that restart. These were in-process native API/routed-command assertions, not
+physical keyboard/mouse tests; the UCI canvas fixture used an owned test window.
+
+Remaining acceptance includes physical menu/key invocation in the normal UCI
+editor, center-key migration, floating/docked contexts, the expanded master
+switch in Designer, mixed selections and nested-schematic regression with the
+new routing policy. Portable and WPF checks cover their underlying policy and
+router where documented above. Keep those application contexts distinct from
+the native geometry checks. Do not extend tests to a connected Core without
+an explicitly scoped target.
 
 The proposed HUD is a separate interaction: Alt + right-drag horizontally for
 Horizontal Gap or vertically for Vertical Gap, with an on-canvas readout.

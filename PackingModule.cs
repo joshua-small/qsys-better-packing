@@ -23,7 +23,7 @@ public sealed class PackingModule : ModModule
         settings = Preferences.RegisterWithControls("better-packing", "Better Packing", () => new PackingSettings(ControlsManagedByCore: true), (value, draft) =>
         {
             var panel = new StackPanel { Margin = new Thickness(16) };
-            panel.Children.Add(new TextBlock { Text = "Gap (schematic units)", Margin = new Thickness(0,0,0,6) });
+            panel.Children.Add(new TextBlock { Text = "Gap (canvas units)", Margin = new Thickness(0,0,0,6) });
             var gap = new TextBox { Text = value.Gap.ToString(), Width = 100, HorizontalAlignment = HorizontalAlignment.Left };
             panel.Children.Add(gap);
             var choices = new PackingOptionsEditor(value);

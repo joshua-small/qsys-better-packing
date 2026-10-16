@@ -56,8 +56,10 @@ namespace QSC.QSys.Graphic
         public bool IsLocked { get; set; }
         public bool IsVisible { get; set; } = true;
         public Vector Offset { get; set; }
+        public Vector BoundsOffset { get; set; }
         public Point Position => obj.Position + Offset;
         public Size Size { get; set; } = new(80, 30);
+        public Rect rc => new(Position + BoundsOffset, Size);
     }
 }
 namespace QsysMods.Core

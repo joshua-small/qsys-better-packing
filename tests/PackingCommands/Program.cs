@@ -97,6 +97,22 @@ internal static class Program
                     Assert(HostSelection.Graphics[1].obj.Position.Y == 167);
                 }
             });
+        Check("Polygon packing uses actual drawn bounds without changing vertices", () =>
+        {
+            canvas.Editor = PackingEditor.Schematic; settings = new(37) { Schematic = all };
+            foreach (var alignment in commands.Keys)
+            {
+                Select(new QSC.QSys.Design.Graphics.Region(), new QSC.QSys.Design.Graphics.Region());
+                HostSelection.Graphics[0].BoundsOffset = new Vector(12.25, -20.75);
+                HostSelection.Graphics[1].BoundsOffset = new Vector(-10.5, 7.5);
+                Invoke(alignment, true);
+                var a = HostSelection.Graphics[0].rc; var b = HostSelection.Graphics[1].rc;
+                double gap = PackingLayout.IsHorizontalRow(alignment) ? b.Left - a.Right : b.Top - a.Bottom;
+                Assert(gap >= 37 && gap < 38);
+                Assert(HostSelection.Graphics[0].BoundsOffset == new Vector(12.25, -20.75)
+                    && HostSelection.Graphics[1].BoundsOffset == new Vector(-10.5, 7.5));
+            }
+        });
         Check("Schematic and UCI preferences remain independent", () =>
         {
             settings = new(37) { Schematic = new(Controls: true) };

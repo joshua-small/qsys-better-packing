@@ -228,4 +228,32 @@ Check("Adding center overrides preserves the old four-direction all-off migratio
     if (!PackingPolicy.LegacyOverridesEnabled(new(), off)
         || !PackingPolicy.LegacyOverridesEnabled(new(), new Dictionary<string, bool>())) throw new Exception("Default behavior changed.");
 });
+Check("Offset polygon bounds keep visible gaps and alignment on the host position grid", () =>
+{
+    PackingItem[] shapes = [new(0, 100, 100, 80, 40, OffsetX: 12.25, OffsetY: -20.75),
+        new(1, 300, 300, 60, 50, OffsetX: -10.5, OffsetY: 7.5)];
+    foreach (var alignment in Enum.GetValues<PackAlignment>())
+    {
+        var result = PackingLayout.Plan(shapes, alignment, 37);
+        bool row = PackingLayout.IsHorizontalRow(alignment);
+        var a = shapes[result[0].Id]; var b = shapes[result[1].Id];
+        var gap = row ? result[1].X + b.OffsetX - result[0].X - a.OffsetX - a.Width
+            : result[1].Y + b.OffsetY - result[0].Y - a.OffsetY - a.Height;
+        if (gap < 37 || gap >= 38) throw new Exception("Polygon visible gap differs.");
+        var before = shapes.Select(i => row ? i.Y + i.OffsetY : i.X + i.OffsetX).ToArray();
+        var sizes = shapes.Select(i => row ? i.Height : i.Width).ToArray();
+        double anchor = alignment is PackAlignment.Left or PackAlignment.Top ? before.Min()
+            : alignment is PackAlignment.Right or PackAlignment.Bottom ? before.Zip(sizes, (p, s) => p + s).Max()
+            : before.Zip(sizes, (p, s) => p + s / 2).Average();
+        foreach (var p in result)
+        {
+            var item = shapes[p.Id]; var start = row ? p.Y + item.OffsetY : p.X + item.OffsetX;
+            var size = row ? item.Height : item.Width;
+            var edge = start + (alignment is PackAlignment.Left or PackAlignment.Top ? 0
+                : alignment is PackAlignment.Right or PackAlignment.Bottom ? size : size / 2);
+            if (Math.Abs(edge - anchor) > .5) throw new Exception("Polygon alignment exceeded host rounding.");
+        }
+    }
+    Reject(() => PackingLayout.Plan([shapes[0] with { OffsetX = double.NaN }, shapes[1]], PackAlignment.Left, 37));
+});
 Console.WriteLine($"{passed} packing contract checks passed.");

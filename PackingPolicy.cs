@@ -44,7 +44,7 @@ internal static class PackingPolicy
         (PackingElement.Component, "Components"), (PackingElement.Layout, "Layout items and connectors"),
         (PackingElement.Control, "Controls and indicators"), (PackingElement.Header, "Headers"),
         (PackingElement.TextBlock, "Text blocks"), (PackingElement.GroupBox, "Group boxes"),
-        (PackingElement.Image, "Images"), (PackingElement.Shape, "Regions")
+        (PackingElement.Image, "Images"), (PackingElement.Shape, "Polygons")
     ];
 
     // One provider for the entire selection. Unknown objects always retain native packing.
