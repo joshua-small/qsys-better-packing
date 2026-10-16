@@ -192,6 +192,36 @@ internal static class Program
             Assert(ui.Read(PackingEditor.Uci).Controls && !saved.Uci.Controls && ui.Read(PackingEditor.Schematic) == saved.Schematic);
             var cancelled = new PackingOptionsEditor(saved); Assert(!cancelled.Read(PackingEditor.Uci).Controls);
         });
+        Check("Pin commands use rendered centers and preserve the category settings", () =>
+        {
+            canvas.Editor = PackingEditor.Schematic;
+            var a = new QSC.QSys.Design.Component { Position = new(100, 100), Size = new(80, 60) };
+            var b = new QSC.QSys.Design.ContainerPin { Position = new(300, 300), Size = new(30, 10) };
+            var ga = new QSC.QSys.Graphic.PinProvider { obj = a, GraphicCanvas = canvas, Size = a.Size };
+            var gb = new QSC.QSys.Graphic.PinProvider { obj = b, GraphicCanvas = canvas, Size = b.Size };
+            ga.pins.Add(new() { InnerPin = new() { Center = new(6, 6) }, CanvasCenter = new(106, 106) });
+            ga.pins.Add(new() { InnerPin = new() { Center = new(6, 46), UserCreated = true }, CanvasCenter = new(106, 146) });
+            gb.pins.Add(new() { InnerPin = new() { Center = new(6, 5) }, CanvasCenter = new(306, 305) });
+            HostSelection.Graphics = [ga, gb];
+            var saved = settings;
+            Assert(SelectionPacker.CanPackPinsOn(canvas, false));
+            SelectionPacker.PackPins(false, false, 37, (_, _) => "receipt", canvas);
+            Assert(a.Position == new Point(100, 100) && b.Position == new Point(217, 101) && settings == saved);
+            b.Position = new(300, 300);
+            SelectionPacker.PackPins(false, true, 37, (_, _) => "receipt", canvas);
+            Assert(b.Position.Y == 141);
+            b.Position = new(300, 300);
+            canvas.Editor = PackingEditor.Uci;
+            Assert(!SelectionPacker.CanPackPinsOn(canvas, false));
+            int operations = HostSelection.Operations;
+            try { SelectionPacker.PackPins(false, false, 37, (_, _) => "receipt", canvas); Assert(false); } catch (ArgumentException) { }
+            Assert(HostSelection.Operations == operations);
+            canvas.Editor = PackingEditor.Schematic;
+            gb.pins[0].CanvasCenter = new(6, 5);
+            Assert(!SelectionPacker.CanPackPinsOn(canvas, false));
+            gb.pins.Clear(); Assert(!SelectionPacker.CanPackPinsOn(canvas, false));
+        });
+        Select(new QSC.QSys.Design.Component(), new QSC.QSys.Design.Component());
         Check("Disposal restores native routing", () => { router.Dispose(); Invoke(PackAlignment.Left, false); });
         Console.WriteLine($"{passed} WPF packing integration checks passed (fixture host; no Designer acceptance).");
     }

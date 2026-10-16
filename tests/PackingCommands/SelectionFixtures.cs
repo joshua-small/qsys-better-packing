@@ -15,6 +15,7 @@ namespace QSC.QSys.Commands
 }
 namespace QSC.QSys.Design
 {
+    public class Pin { public bool UserCreated; public Point Center { get; set; } }
     public class Object
     {
         public Point Position { get; set; }
@@ -48,6 +49,12 @@ namespace QSC.QSys.Design.Mux
 }
 namespace QSC.QSys.Graphic
 {
+    public class Pin
+    {
+        public QSC.QSys.Design.Pin InnerPin { get; init; } = new();
+        public Point CanvasCenter { get; set; }
+    }
+    public class PinProvider : Object { public List<Pin> pins { get; } = []; }
     public class Object
     {
         public QSC.QSys.Design.Object obj { get; init; } = null!;
@@ -64,6 +71,11 @@ namespace QSC.QSys.Graphic
 }
 namespace QsysMods.Core
 {
+    public static class Host
+    {
+        public static Type Type(string name) => typeof(Host).Assembly.GetType(name, true)!;
+        public static object Field(object instance, string name) => instance.GetType().GetField(name)!.GetValue(instance)!;
+    }
     public static class HostSelection
     {
         public static QSC.QSys.Graphic.Object[] Graphics { get; set; } = [];

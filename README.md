@@ -27,8 +27,15 @@ Versions before 0.1.3 registered four extra, identically named directional actio
 
 Migration preserves a saved legacy opt-out or a previous all-off selection. A partial per-direction selection becomes the default all-on group. Re-enabling Packing offers overwrite confirmation when another provider claims these commands. Original per-action records remain as history and no longer control this group. Older settings without category choices receive the defaults above; their saved Gap is retained.
 
-Better Packing **0.2.1** requires [Q-SYS Mods Core](https://github.com/joshua-small/qsys-mods-core) **0.1.6 or newer within 0.1.x** and the exact supported Designer 10.5 build. The package and signed catalog enforce this dependency; Better Shortcuts remains optional. The 0.2 release range preserves the immutable dependency policy and pins of earlier 0.1.x packages. Use Mod Manager 0.8+ and its bundle migration; do not enable beside Schematic Tools 0.16 or earlier.
+Better Packing **0.2.2** requires [Q-SYS Mods Core](https://github.com/joshua-small/qsys-mods-core) **0.1.6 or newer within 0.1.x** and the exact supported Designer 10.5 build. The package and signed catalog enforce this dependency; Better Shortcuts remains optional. The 0.2 release range preserves the immutable dependency policy and pins of earlier 0.1.x packages. Use Mod Manager 0.8+ and its bundle migration; do not enable beside Schematic Tools 0.16 or earlier.
 
+## Pin-aligned packing
+
+**Pack to Top Pins** and **Pack to Bottom Pins** align the selected objects by their actual highest or lowest pin centers. These additional actions are in the Better Packing window and can receive shortcuts through Core; they have no default keys. They apply only to schematic components, connectors and Signal Snakes, including nested schematics.
+
+Items form a horizontal row using full drawn widths and the saved Gap. Adjacent internal connectors remain flush. Default anchors use the main component pins; **Use exposed control pins for pin-aligned packing** selects drawer pins instead. Internal connectors retain their sole pin. Missing pins, stale canvas coordinates and positions that cannot preserve exact alignment are rejected before mutation. This fixes the one-unit alignment difference between a compact connector's 5-unit center and a component's 6-unit first pin without guessing offsets.
+
+Drawer bounds remain part of the footprint. Pin packing changes geometry only and uses the existing grouped move/undo path. The six native boundary commands and per-editor choices retain their behavior.
 ## Development
 
 Clone Core beside this repository. Build with .NET 10.0.112 and local references:
@@ -45,3 +52,9 @@ For 0.2.1, 86 assertions in an isolated Designer 10.5 copy checked the new graph
 On 2026-10-14, matching 0.1.3 builds were checked in Designer 10.5 on a disposable two-component schematic. Ctrl+Shift+L/R/T/B each executed Better Packing once with Gap 20; operation receipts confirmed the final positions and each operation was undone. With the opt-out enabled, Ctrl+Shift+L used Q-SYS's zero-gap packing; disabling the opt-out restored Better Packing. Better Shortcuts showed one assigned row per direction and the selected provider. Clear/Reset, saving/reopening, and cancelling a staged opt-out were checked. The test insertions were undone and default overrides restored. UCI passthrough, menu/context-menu paths, invalid selections and the wider editor matrix remain tracked in [issue #2](https://github.com/joshua-small/qsys-better-packing/issues/2).
 
 Feature source originated in `joshua-small/qsys-schematic-tools` commit `13c52e6`; public source contains no vendor binaries or decompiled implementation. [Split tracking](https://github.com/joshua-small/qsys-schematic-tools/issues/4).
+
+## Geometry update acceptance (2026-10-16)
+
+A disposable exact-build Designer 10.5 copy with redirected preferences exercised Containers, Channel Groups and a second Container nesting level. Twelve top/bottom pin operations covered main and exposed drawer pins; each verified equal native CanvasCenter coordinates and one-step undo/redo. Six registered pin commands and twelve existing routed boundary commands ran with native nested-canvas focus. Three checks confirmed six body/drawer snap corners and the Wiring snap domain on compact connectors. The fixture was saved to a separate output and the original hash stayed unchanged.
+
+This is native API/routed-command evidence. Physical drag tolerance, physical shortcut input, connected wires, broader component/domain coverage and DSP/hardware are not established by it. Source and test fixtures contain no vendor code or binaries. The guarded driver is in Better Packing tests/PinProbe; it only runs with a matching disposable path, marker and fixture hash.

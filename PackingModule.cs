@@ -26,6 +26,8 @@ public sealed class PackingModule : ModModule
             panel.Children.Add(new TextBlock { Text = "Gap (canvas units)", Margin = new Thickness(0,0,0,6) });
             var gap = new TextBox { Text = value.Gap.ToString(), Width = 100, HorizontalAlignment = HorizontalAlignment.Left };
             panel.Children.Add(gap);
+            var pinGroup = new CheckBox { Content = "Use exposed control pins for pin-aligned packing", IsChecked = value.PackToExposedControlPins, Margin = new Thickness(0, 12, 0, 0) };
+            panel.Children.Add(pinGroup);
             var choices = new PackingOptionsEditor(value);
             panel.Children.Add(choices.View);
             panel.Children.Add(new TextBlock { Text = "Choose which element types use the gap above. If a selection includes a type set to Native, the entire selection uses native packing. Layout includes Containers, Channel Groups, muxes, popup buttons and internal connectors; adjacent internal connectors remain flush.", TextWrapping = TextWrapping.Wrap });
@@ -34,7 +36,7 @@ public sealed class PackingModule : ModModule
             panel.Children.Add(new TextBlock { Text = "The master switch above restores every native Pack action. Your shortcut assignments are kept. Groups, Flexboxes, other unlisted types and component control panels always use native packing. The Better Packing window explicitly packs supported items regardless of these routing choices.", TextWrapping = TextWrapping.Wrap });
             return new PreferenceEditor<PackingSettings>(new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
                 () => int.TryParse(gap.Text, out var number) ? new PackingSettings(number, value.ReplaceDefaultPackBehavior, true)
-                { Schematic = choices.Read(PackingEditor.Schematic), Uci = choices.Read(PackingEditor.Uci) } : throw new ArgumentException("Gap must be a whole number."));
+                { Schematic = choices.Read(PackingEditor.Schematic), Uci = choices.Read(PackingEditor.Uci), PackToExposedControlPins = pinGroup.IsChecked == true } : throw new ArgumentException("Gap must be a whole number."));
         }, value => value.Validate());
         settings.Changed += CommandManager.InvalidateRequerySuggested;
         foreach (var alignment in Enum.GetValues<PackAlignment>())
@@ -58,8 +60,19 @@ public sealed class PackingModule : ModModule
                 }, canvas => Pack(selected, canvas, "native-command: " + command.Name));
         }
         Commands.Register(new("better-packing/window", "Better Packing…", "Better Packing", Show, () => true, InMenu: true));
+        foreach (bool bottom in new[] { false, true })
+        {
+            bool selected = bottom;
+            Commands.Register(new("better-packing/pins-" + (bottom ? "bottom" : "top"), PinTitle(bottom), "Better Packing",
+                () => PackPins(selected, ReadContext(main).Canvas),
+                () => ReadContext(main) is { Focus: PackingFocus.Schematic, Canvas: { } canvas } && SelectionPacker.CanPackPinsOn(canvas, settings.Value.PackToExposedControlPins))
+                { When = "Schematic canvas; rendered pins in the selected pin group" });
+        }
     }
     private static string Title(PackAlignment value) => value == PackAlignment.VerticalCenter ? "Vertical Pack Center" : "Pack " + value;
+    private static string PinTitle(bool bottom) => "Pack to " + (bottom ? "Bottom" : "Top") + " Pins";
+    private void PackPins(bool bottom, object? canvas = null) => SelectionPacker.PackPins(bottom, settings!.Value.PackToExposedControlPins,
+        settings.Value.Gap, (kind, detail) => Host.RequiredReceipt("better-packing", kind, detail), canvas);
     private void Pack(PackAlignment alignment, object? canvas = null, string invocation = "operation-window")
         => SelectionPacker.Pack(alignment, settings!.Value.Gap, (kind, detail) => Host.RequiredReceipt("better-packing", kind, detail), canvas, invocation);
     private void Show()
@@ -73,6 +86,13 @@ public sealed class PackingModule : ModModule
         {
             var button = new Button { Content = Title(alignment), Margin = new Thickness(0,8,0,0), Padding = new Thickness(8) };
             button.Click += (_, _) => { try { Pack(alignment); } catch (Exception ex) { Host.Error("better-packing", ex, true); } }; body.Children.Add(button);
+        }
+        foreach (bool bottom in new[] { false, true })
+        {
+            bool selected = bottom;
+            var button = new Button { Content = PinTitle(bottom), Margin = new Thickness(0, 8, 0, 0), Padding = new Thickness(8) };
+            button.Click += (_, _) => { try { PackPins(selected); } catch (Exception ex) { Host.Error("better-packing", ex, true); } };
+            body.Children.Add(button);
         }
         var preferences = new Button { Content = "Packing preferences…", Margin = new Thickness(0,16,0,0), Padding = new Thickness(8) };
         preferences.Click += (_, _) => Preferences.Open("better-packing"); body.Children.Add(preferences);
