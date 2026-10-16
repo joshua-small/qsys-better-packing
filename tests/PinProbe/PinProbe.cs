@@ -45,11 +45,23 @@ public sealed partial class PinProbe : IDesignerModule
         var file = Path.Combine(AppContext.BaseDirectory, ".pin-lab-probe.json");
         if (!File.Exists(file) || !File.Exists(Path.Combine(AppContext.BaseDirectory, ".selection-probe-lab"))) return;
         config = JsonSerializer.Deserialize<Config>(File.ReadAllText(file))!;
+        // Keep guard rejection visible during local acceptance; never write
+        // outside the explicitly marked disposable application directory.
+        File.WriteAllText(Path.Combine(AppContext.BaseDirectory, ".pin-lab-startup.json"), JsonSerializer.Serialize(new
+        {
+            pid = Environment.ProcessId,
+            applicationMatches = Path.GetFullPath(config.ApplicationDirectory).TrimEnd('\\').Equals(AppContext.BaseDirectory.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase),
+            argumentMatches = Environment.GetCommandLineArgs().Any(x => x.Equals(config.Input, StringComparison.OrdinalIgnoreCase)),
+            inputHashMatches = Hash(config.Input) == config.InputHash,
+            receiptExists = File.Exists(config.Receipt),
+            saveAsExists = config.SaveAs is not null && File.Exists(config.SaveAs),
+            saveAsDirectoryMatches = config.SaveAs is null || Path.GetDirectoryName(config.SaveAs) == Path.GetDirectoryName(config.Input)
+        }, new JsonSerializerOptions { WriteIndented = true }));
         if (!Path.GetFullPath(config.ApplicationDirectory).TrimEnd('\\').Equals(AppContext.BaseDirectory.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)
             || !Environment.GetCommandLineArgs().Any(x => x.Equals(config.Input, StringComparison.OrdinalIgnoreCase))
             || Hash(config.Input) != config.InputHash || File.Exists(config.Receipt)) return;
         if (config.SaveAs is not null && (File.Exists(config.SaveAs) || Path.GetDirectoryName(config.SaveAs) != Path.GetDirectoryName(config.Input))) return;
-        timer = new DispatcherTimer(DispatcherPriority.ContextIdle) { Interval = TimeSpan.FromSeconds(2) };
+        timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2) };
         timer.Tick += async (_, _) => await Run();
         timer.Start();
     }
@@ -74,9 +86,16 @@ public sealed partial class PinProbe : IDesignerModule
         var checks = new List<object>();
         try
         {
+            File.WriteAllText(Path.Combine(AppContext.BaseDirectory, ".pin-lab-wait.json"), JsonSerializer.Serialize(new
+            {
+                pid = Environment.ProcessId, attempts,
+                mainTitle = Application.Current.MainWindow?.Title,
+                loaded = Application.Current.MainWindow?.IsLoaded,
+                enabled = Application.Current.MainWindow?.IsEnabled
+            }));
             if (++attempts > 60) throw new InvalidOperationException("Lab document did not become ready.");
             if (Application.Current.MainWindow is not { IsLoaded: true, IsEnabled: true } window
-                || !window.Title.StartsWith(Path.GetFileNameWithoutExtension(config!.Input), StringComparison.Ordinal) || attempts < 10) return;
+                || !window.Title.StartsWith(Path.GetFileNameWithoutExtension(config!.Input), StringComparison.Ordinal)) return;
             host = AppDomain.CurrentDomain.GetAssemblies().Single(a => a.GetName().Name == "Q-Sys Designer");
             var graphics = Graphics();
             var componentGraphic = graphics.FirstOrDefault(T("Graphic.Component").IsInstanceOfType);

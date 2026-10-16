@@ -8,7 +8,7 @@ are redirected to a test profile.
 `PinProbe.cs` documents the required `.pin-lab-probe.json` configuration. The
 driver requires a matching application directory, `.selection-probe-lab` marker,
 command-line fixture path and SHA-256. It refuses existing receipt/save outputs,
-requires disconnected Design mode, and checks the exact Designer hash.
+requires disconnected Design mode, and checks the exact Designer hash. Local `.pin-lab-startup.json` and `.pin-lab-wait.json` receipts expose startup guards/readiness in the marked disposable directory. The observer runs below render/input priority once the actual document and geometry are ready; it does not require an arbitrary startup delay.
 
 `TestNested` produces a separate fixture with 17 internal connectors across a
 Container, its nested Container, and a Channel Group. `ExpectedConnectorCount`
