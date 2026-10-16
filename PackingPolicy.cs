@@ -6,6 +6,8 @@ internal enum PackingElement { Unknown, Component, Layout, Control, Header, Text
 // Optional properties preserve the saved gap and old master opt-out on upgrade.
 public sealed record PackingSettings(int Gap = 20, bool ReplaceDefaultPackBehavior = true, bool ControlsManagedByCore = false)
 {
+    // Retain the legacy stored value when saving other preferences. Explicit
+    // Main/Drawer commands now choose the pin group independently of this value.
     public bool PackToExposedControlPins { get; init; }
     public PackingElementOptions Schematic { get; init; } = new(Components: true, Layout: true);
     public PackingElementOptions Uci { get; init; } = new();

@@ -51,7 +51,9 @@ public sealed partial class PinProbe
         Set(physicalCanvas,"CanvasScaleFactor",2.0);
         Choose([]);
     }
-    private static async Task Idle() => await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
+    // Below render/input, without waiting for Designer's intermittently starved
+    // ContextIdle queue when other app windows are open.
+    private static async Task Idle() => await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
     private async Task StartPhysical(object manager, object root)
     {
         using (var isolation=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"profile","isolation.json"))))
@@ -143,7 +145,7 @@ public sealed partial class PinProbe
     }
     private void BeginPhysicalCommands()
     {
-        timer=new DispatcherTimer(DispatcherPriority.ContextIdle) { Interval=TimeSpan.FromMilliseconds(500) };
+        timer=new DispatcherTimer(DispatcherPriority.Background) { Interval=TimeSpan.FromMilliseconds(500) };
         timer.Tick+=async (_,_)=>await PhysicalTick(); timer.Start();
     }
     private object[] CheckWires()

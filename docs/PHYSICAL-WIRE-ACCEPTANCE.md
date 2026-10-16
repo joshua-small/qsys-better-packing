@@ -78,6 +78,56 @@ connector types were not converted to video. Earlier tracking's generic
 above; the inspected host has no separate `Network` wiring-domain enum member.
 These observations do not establish device streaming or arbitrary network types.
 
+## Owner feedback and follow-up candidate
+
+The owner subsequently tested Windows Display Scale, Application Zoom and Design
+Zoom and reported no effect. Exact values were not supplied, so this is
+owner-observed acceptance for the settings tried, not an exhaustive scale matrix.
+Repeating every display-scale combination is no longer a blocker without a
+specific regression. The owner also confirmed three concrete follow-ups: four
+explicit Main/Drawer pin actions, Undo/Redo while the Better Packing window has
+focus, and retention of connector corner snapping alongside pin snapping.
+
+The 0.3.0 Packing, 0.1.8 Core and 0.1.1 Compact Connectors update addresses
+those changes. The Input x and Output x labels are created only by the disposable
+fixture driver; product hooks preserve native/custom/empty labels.
+
+## Feedback update physical acceptance
+
+After the other chat released Computer Use, the changed product code passed
+focused physical checks in the same isolated exact-build Designer installation.
+The test observer uses a background dispatcher callback below render/input and
+explicit readiness guards instead of a fixed ten-tick startup delay. These are
+test-driver changes only.
+
+| Physical input | Observed result |
+| --- | --- |
+| Click Top Main, Bottom Main, Top Drawer and Bottom Drawer in the Better Packing window | Two connectors and an open-drawer Gain aligned to the requested native pin row in a nested Container. Recorded rows were respectively Y=105, 186, 105 and 224. All nine Control connections remained attached with matching rendered endpoints. |
+| Ctrl+Z and Ctrl+Y with that window focused | Restored the exact pre-pack and post-pack position sets. The initial run exposed duplicate native Undo gestures in the shared chord matcher. Core now deduplicates those gestures, with regression coverage; the repeated physical test passed. |
+| Wired Control connector drag | Reached the Gain main-body corner row at connector Y=180, the adjacent main-pin row at Y=181 (pin Y=186), and an exposed drawer-pin row at Y=209 (pin Y=214). |
+| Wired AV Stream and MediaCast connector drags | Each reached corner Y=180 and adjacent pin-aligned Y=181. The retained native corners no longer disappear when pin snapping is active. |
+| Fresh-process reopen of each separate Control, AV Stream and MediaCast output | All 19 endpoint-ID pairs, endpoint coordinates and domains matched the saved observations; all 19 rendered wire paths reached their pins. |
+
+Source fixtures remained unchanged. Nine of ten recorded personal/vendor files
+retained their hashes; the shared native Prefs.xml changed during concurrent
+Designer activity and was preserved. The isolated profile was verified before
+the fixture driver ran. No regular installed mod payload was changed by testing.
+
+The physically exercised product payloads were:
+
+| Payload | SHA-256 |
+| --- | --- |
+| Core 0.1.8 loader | `3ef0d9323d856ffa4b66ef62ff25c03a66a5033e7ea07113133b1259b458e89c` |
+| Core 0.1.8 runtime | `9fd519e94bdb6bd712793eaf9fa954ec4ebcb7a55502cc8ba9ff02c95f7067f7` |
+| Better Packing 0.3.0 | `a28df9cfa620f5b8c6637af23838d13e1d52d89088bb4d566df0c74ccec3a42c` |
+| Compact Connectors 0.1.1 | `e0e51e06e6cca9dc23db27747d5d9e8fbce704268414264bfc3cfbb3fc250d38` |
+
+Component Auto Width 0.1.0 was present unchanged. Earlier Control drag observations
+preceded the Core duplicate-gesture fix; the four-button/history checks and both
+video drag cases used the corrected Core payload above. Compact/Packing payloads
+were identical throughout the follow-up. These results establish the exercised
+Designer geometry and history paths, not device streaming or hardware behavior.
+
 ## Exercised release identity and limits
 
 | Payload | SHA-256 |
@@ -86,9 +136,10 @@ These observations do not establish device streaming or arbitrary network types.
 | Compact Connectors 0.1.0 DLL | `09bcf491b5c7c80efa5c618f655ba1a88ec5193bd681d0ca27d29d37221d8dd6` |
 | Better Packing 0.2.2 DLL | `f3e1adada5544ca20458162917faf4e69680a88713a42ff7c1cd4abb9376571f` |
 
-Other Windows display scales, physical drags with the newly attached non-audio
-wires, mixed-selection drag domains, native 12-unit connectors, broader
-component/pin counts and the wider editor/load-order matrix remain unverified. Existing
+Held-modifier Alt/copy and Ctrl-bypass gestures, mixed-selection drag domains,
+native 12-unit connectors, broader component/pin counts and the wider editor/load-order
+matrix remain outside this physical follow-up. Owner-observed scale tests above
+supersede the former broad display-scale gate. Existing
 [packing acceptance](https://github.com/joshua-small/qsys-better-packing/issues/2)
 and [geometry integration tracking](https://github.com/joshua-small/qsys-automatic-geometry/issues/4)
 retain that residual scope. This is Designer geometry/connectivity evidence,
