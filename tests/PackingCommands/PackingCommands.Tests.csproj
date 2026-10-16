@@ -9,6 +9,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../PackingContext.cs" Link="PackingContext.cs" />
+    <Compile Include="../../PackingPolicy.cs" Link="PackingPolicy.cs" />
+    <Compile Include="../../PackingOptionsEditor.cs" Link="PackingOptionsEditor.cs" />
+    <Compile Include="../../SelectionPacker.cs" Link="SelectionPacker.cs" />
     <Compile Include="../../../qsys-mods-core/Core/ReplacementRouter.cs" Link="ReplacementRouter.cs" />
     <Compile Include="../../../qsys-mods-core/Core/ControlPlan.cs" Link="ControlPlan.cs" />
     <Compile Include="../../../qsys-mods-core/Core/ControlGestures.cs" Link="ControlGestures.cs" />

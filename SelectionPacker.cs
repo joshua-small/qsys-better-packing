@@ -9,30 +9,28 @@ internal static class SelectionPacker
 {
     private sealed record Item(object Model, Point Position, Size Body, Size Drawn, bool IsInternalConnector);
 
-    // Normal 10.5 Schematic Elements > Layout entries, plus ordinary components.
-    // Generic Graphic.Object also includes UCI controls and unreviewed object types.
-    private static readonly IReadOnlyDictionary<string, string> GraphicTypes = new Dictionary<string, string>
-    {
-        ["QSC.QSys.Design.Component"] = "QSC.QSys.Graphic.Component",
-        ["QSC.QSys.Design.Container"] = "QSC.QSys.Graphic.Container",
-        ["QSC.QSys.Design.ChannelGroup"] = "QSC.QSys.Graphic.ChannelGroup",
-        ["QSC.QSys.Design.ContainerPin"] = "QSC.QSys.Graphic.ContainerPin",
-        ["QSC.QSys.Design.Graphics.Popup"] = "QSC.QSys.Graphic.Popup.PopupButton",
-        ["QSC.QSys.Design.Mux.Muxer"] = "QSC.QSys.Graphic.Mux.Muxer",
-        ["QSC.QSys.Design.Mux.Demuxer"] = "QSC.QSys.Graphic.Mux.Muxer"
-    };
+    internal static PackingEditor EditorForCanvas(object canvas) => HostSelection.IsSchematicCanvas(canvas)
+        ? PackingEditor.Schematic : HostSelection.RequiredProperty(canvas, "IsUciPage") is true ? PackingEditor.Uci : PackingEditor.Other;
 
-    private static string? GraphicTypeName(Type type)
+    internal static ReplacementAvailability Availability(object canvas, PackingSettings settings)
     {
-        // Host component locations can derive from Component; preserve that support.
-        for (Type? current = type; current is not null; current = current.BaseType)
-            if (GraphicTypes.TryGetValue(current.FullName ?? "", out var name)) return name;
-        return null;
+        try
+        {
+            var editor = EditorForCanvas(canvas);
+            if (editor == PackingEditor.Other) return ReplacementAvailability.OutsideScope;
+            var elements = HostSelection.SelectedModels().Select(m => PackingPolicy.Classify(m.GetType())).ToArray();
+            if (!PackingPolicy.UseBetter(settings, editor, elements)) return ReplacementAvailability.OutsideScope;
+            return CanPackOn(canvas) ? ReplacementAvailability.Ready : ReplacementAvailability.Blocked;
+        }
+        catch { return ReplacementAvailability.Blocked; }
     }
 
     private static Item[] ReadItems(object? expectedCanvas = null)
     {
         Application.Current.Dispatcher.VerifyAccess();
+        // Preserve the host's edit/control-tool boundary and canvas-lock rules.
+        if (HostSelection.HostType("QSC.QSys.Commands.Align").GetProperty("Can")?.GetValue(null) is not true)
+            throw new InvalidOperationException("Select at least two movable items in an editing canvas. Nothing moved.");
         var models = HostSelection.SelectedModels();
         var objectType = HostSelection.HostType("QSC.QSys.Graphic.Object");
         var graphics = ((IEnumerable)HostSelection.GlobalSelection).Cast<object>()
@@ -41,24 +39,23 @@ internal static class SelectionPacker
         object? canvas = null;
         foreach (var model in models)
         {
-            var graphicName = GraphicTypeName(model.GetType());
-            if (graphicName is null)
-                throw new InvalidOperationException($"Packing supports schematic components, Layout items and internal input/output connectors. Unsupported selection: {model.GetType().FullName}. Nothing moved.");
-            var graphicType = HostSelection.HostType(graphicName);
-            var matches = graphics.Where(g => graphicType.IsInstanceOfType(g)
-                && ReferenceEquals(HostSelection.RequiredProperty(g, "obj"), model)).ToArray();
+            if (PackingPolicy.Classify(model.GetType()) == PackingElement.Unknown)
+                throw new InvalidOperationException($"This object uses native packing: {model.GetType().Name}. Use Tools > Pack for this selection. Nothing moved.");
+            var matches = graphics.Where(g => ReferenceEquals(HostSelection.RequiredProperty(g, "obj"), model)).ToArray();
             if (matches.Length != 1)
                 throw new InvalidOperationException("A selected item does not have one unambiguous drawn instance. Nothing moved.");
             var graphic = matches[0];
             var currentCanvas = HostSelection.RequiredProperty(graphic, "GraphicCanvas");
             if (HostSelection.RequiredProperty(graphic, "IsCanvasLocked") is not false
+                || HostSelection.RequiredProperty(graphic, "IsLocked") is not false
+                || HostSelection.RequiredProperty(graphic, "IsVisible") is not true
                 || (expectedCanvas is not null && !ReferenceEquals(currentCanvas, expectedCanvas)))
-                throw new InvalidOperationException("The selected items must be on the same unlocked schematic canvas. Nothing moved.");
-            if (canvas is null && !HostSelection.IsSchematicCanvas(currentCanvas))
-                throw new InvalidOperationException("Select items on a schematic page or inside a Container or Channel Group schematic. Use native packing for UCI and control panels. Nothing moved.");
+                throw new InvalidOperationException("The selected items must be visible on the same unlocked canvas. Nothing moved.");
+            if (canvas is null && EditorForCanvas(currentCanvas) == PackingEditor.Other)
+                throw new InvalidOperationException("Select items on a schematic or UCI page. Component control panels use native packing. Nothing moved.");
             canvas ??= currentCanvas;
             if (!ReferenceEquals(canvas, currentCanvas))
-                throw new InvalidOperationException("Select items on one schematic canvas. Nothing moved.");
+                throw new InvalidOperationException("Select items on one canvas. Nothing moved.");
             var position = (Point)HostSelection.RequiredProperty(model, "Position");
             var graphicPosition = (Point)HostSelection.RequiredProperty(graphic, "Position");
             var body = (Size)HostSelection.RequiredProperty(model, "Size");

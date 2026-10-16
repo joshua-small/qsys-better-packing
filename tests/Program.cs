@@ -172,4 +172,60 @@ Check("Connector policy follows sorted adjacency and preserves nonnegative valid
     Equal(100, result[0].Y); Equal(130, result[1].Y); Equal(242, result[2].Y);
     Reject(() => PackingLayout.Plan(shuffled, PackAlignment.Left, -1));
 });
+Check("Legacy preferences preserve gap and opt-out while supplying editor defaults", () =>
+{
+    var legacy = System.Text.Json.JsonSerializer.Deserialize<PackingSettings>("{\"Gap\":37,\"ReplaceDefaultPackBehavior\":false,\"ControlsManagedByCore\":true}")!;
+    legacy.Validate(); Equal(37, legacy.Gap);
+    if (legacy.ReplaceDefaultPackBehavior || !legacy.ControlsManagedByCore
+        || !PackingPolicy.UseBetter(legacy, PackingEditor.Schematic, [PackingElement.Component, PackingElement.Layout])
+        || PackingPolicy.UseBetter(legacy, PackingEditor.Uci, [PackingElement.Control])) throw new Exception("Legacy choices changed.");
+});
+Check("Defaults route every new category and mixed selection to native", () =>
+{
+    var settings = new PackingSettings();
+    foreach (var kind in Enum.GetValues<PackingElement>().Where(k => k is not PackingElement.Component and not PackingElement.Layout))
+    {
+        if (PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [kind, kind])
+            || PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [PackingElement.Component, kind])
+            || PackingPolicy.UseBetter(settings, PackingEditor.Uci, [kind, kind])) throw new Exception("A default captured native packing.");
+    }
+});
+Check("Editor and category choices are independent and survive JSON round-trip", () =>
+{
+    var settings = new PackingSettings { Schematic = new(Components: true, Headers: true), Uci = new(Controls: true, Images: true) };
+    settings = System.Text.Json.JsonSerializer.Deserialize<PackingSettings>(System.Text.Json.JsonSerializer.Serialize(settings))!;
+    if (!PackingPolicy.UseBetter(settings, PackingEditor.Uci, [PackingElement.Control, PackingElement.Image])
+        || PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [PackingElement.Control, PackingElement.Image])
+        || !PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [PackingElement.Header, PackingElement.Component])
+        || PackingPolicy.UseBetter(settings, PackingEditor.Uci, [PackingElement.Control, PackingElement.Header])) throw new Exception("Editor choices leaked.");
+});
+Check("All-on cannot capture unknown objects, empty selections or control panels", () =>
+{
+    var all = new PackingElementOptions(true, true, true, true, true, true, true, true);
+    var settings = new PackingSettings { Schematic = all, Uci = all };
+    foreach (var editor in new[] { PackingEditor.Schematic, PackingEditor.Uci })
+    {
+        if (!PackingPolicy.UseBetter(settings, editor, PackingPolicy.Choices.Select(c => c.Element).ToArray())
+            || PackingPolicy.UseBetter(settings, editor, [PackingElement.Control, PackingElement.Unknown])
+            || PackingPolicy.UseBetter(settings, editor, [])) throw new Exception("Unknown selection was captured.");
+    }
+    if (PackingPolicy.UseBetter(settings, PackingEditor.Other, [PackingElement.Control, PackingElement.Control])) throw new Exception("Control panel was captured.");
+});
+Check("Invalid settings are rejected before publication", () =>
+{
+    Reject(() => new PackingSettings(-1).Validate());
+    Reject(() => new PackingSettings(10001).Validate());
+    Reject(() => (new PackingSettings { Schematic = null! }).Validate());
+    Reject(() => (new PackingSettings { Uci = null! }).Validate());
+});
+Check("Adding center overrides preserves the old four-direction all-off migration", () =>
+{
+    var off = new[] { "left", "right", "top", "bottom" }.ToDictionary(d => "better-packing/replace-" + d, _ => false);
+    if (PackingPolicy.LegacyOverridesEnabled(new(), off)
+        || PackingPolicy.LegacyOverridesEnabled(new(ReplaceDefaultPackBehavior: false), new Dictionary<string, bool>()))
+        throw new Exception("Legacy opt-out was lost.");
+    off["better-packing/replace-top"] = true;
+    if (!PackingPolicy.LegacyOverridesEnabled(new(), off)
+        || !PackingPolicy.LegacyOverridesEnabled(new(), new Dictionary<string, bool>())) throw new Exception("Default behavior changed.");
+});
 Console.WriteLine($"{passed} packing contract checks passed.");

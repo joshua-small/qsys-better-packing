@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "better-packing",
   "name": "Better Packing",
-  "description": "Pack schematic components and Layout items with exposed control-pin spacing, a saved gap, and optional replacement of native Pack commands.",
+  "description": "Pack schematic and UCI elements with a saved gap, exposed control-pin spacing, and native or Better Packing choices by element type and editor.",
   "author": "joshua-small",
   "helpUrl": "https://github.com/joshua-small/qsys-better-packing",
   "thumbnail": "catalog/artwork/avitex.ico"
