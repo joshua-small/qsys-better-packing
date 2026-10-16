@@ -11,6 +11,7 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet run --project tests/PackingLayout.Tests.csproj
+      - run: dotnet run --project tests/PinPacking/PinPacking.Tests.csproj
   routing:
     name: Windows routing
     runs-on: windows-latest

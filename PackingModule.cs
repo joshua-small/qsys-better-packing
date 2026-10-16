@@ -7,7 +7,7 @@ using QsysMods.Core;
 namespace Designer.Modules.BetterPacking;
 
 // The two legacy flags are retained for migration/rollback; the Core group is authoritative.
-public sealed record PackingSettings(int Gap = 20, bool ReplaceDefaultPackBehavior = true, bool ControlsManagedByCore = false);
+public sealed record PackingSettings(int Gap = 20, bool ReplaceDefaultPackBehavior = true, bool ControlsManagedByCore = false, bool PackToExposedControlPins = false);
 public sealed class PackingModule : ModModule
 {
     private const string OverrideGroup = "better-packing/default-controls";
@@ -29,10 +29,12 @@ public sealed class PackingModule : ModModule
             panel.Children.Add(new TextBlock { Text = "Gap (schematic units)", Margin = new Thickness(0,0,0,6) });
             var gap = new TextBox { Text = value.Gap.ToString(), Width = 100, HorizontalAlignment = HorizontalAlignment.Left };
             panel.Children.Add(gap);
+            var pinGroup = new CheckBox { Content = "Use exposed control pins for pin-aligned packing", IsChecked = value.PackToExposedControlPins, Margin = new Thickness(0, 12, 0, 0) };
+            panel.Children.Add(pinGroup);
             var controls = ControlGroupPreference.Create(draft, OverrideGroup, "Disable default Q-SYS control overrides");
             controls.Margin = new Thickness(0, 20, 0, 0); panel.Children.Add(controls);
             panel.Children.Add(new TextBlock { Text = "Better Packing replaces Pack Left, Right, Top, and Bottom by default, using their existing shortcuts, Tools > Pack, and right-click Pack. Check this option to use the original Q-SYS actions for all four. Your shortcut assignments are kept. UCI packing stays native.", TextWrapping = TextWrapping.Wrap });
-            return new PreferenceEditor<PackingSettings>(panel, () => int.TryParse(gap.Text, out var number) ? new(number, value.ReplaceDefaultPackBehavior, true) : throw new ArgumentException("Gap must be a whole number."));
+            return new PreferenceEditor<PackingSettings>(panel, () => int.TryParse(gap.Text, out var number) ? new(number, value.ReplaceDefaultPackBehavior, true, pinGroup.IsChecked == true) : throw new ArgumentException("Gap must be a whole number."));
         }, value => { if (value.Gap is < 0 or > 10000) throw new ArgumentException("Gap must be between 0 and 10000."); });
         foreach (var alignment in new[] { PackAlignment.Left, PackAlignment.Right, PackAlignment.Top, PackAlignment.Bottom })
         {
@@ -54,6 +56,14 @@ public sealed class PackingModule : ModModule
                 }, canvas => Pack(selected, canvas, "native-command: " + command.Name));
         }
         Commands.Register(new("better-packing/window", "Better Packing…", "Better Packing", Show, () => true, InMenu: true));
+        foreach (bool bottom in new[] { false, true })
+        {
+            bool selected = bottom;
+            Commands.Register(new("better-packing/pins-" + (bottom ? "bottom" : "top"), PinTitle(bottom), "Better Packing",
+                () => PackPins(selected, ReadContext(main).Canvas),
+                () => ReadContext(main) is { Focus: PackingFocus.Schematic, Canvas: { } canvas } && SelectionPacker.CanPackPinsOn(canvas, settings.Value.PackToExposedControlPins))
+                { When = "Schematic canvas; rendered pins in the selected pin group" });
+        }
         foreach (var alignment in new[] { PackAlignment.Center, PackAlignment.VerticalCenter })
         {
             var selected = alignment;
@@ -63,6 +73,9 @@ public sealed class PackingModule : ModModule
         }
     }
     private static string Title(PackAlignment value) => value == PackAlignment.VerticalCenter ? "Vertical Pack Center" : "Pack " + value;
+    private static string PinTitle(bool bottom) => "Pack to " + (bottom ? "Bottom" : "Top") + " Pins";
+    private void PackPins(bool bottom, object? canvas = null) => SelectionPacker.PackPins(bottom, settings!.Value.PackToExposedControlPins,
+        settings.Value.Gap, (kind, detail) => Host.RequiredReceipt("better-packing", kind, detail), canvas);
     private void Pack(PackAlignment alignment, object? canvas = null, string invocation = "operation-window")
         => SelectionPacker.Pack(alignment, settings!.Value.Gap, (kind, detail) => Host.RequiredReceipt("better-packing", kind, detail), canvas, invocation);
     private void Show()
@@ -76,6 +89,13 @@ public sealed class PackingModule : ModModule
         {
             var button = new Button { Content = Title(alignment), Margin = new Thickness(0,8,0,0), Padding = new Thickness(8) };
             button.Click += (_, _) => { try { Pack(alignment); } catch (Exception ex) { Host.Error("better-packing", ex, true); } }; body.Children.Add(button);
+        }
+        foreach (bool bottom in new[] { false, true })
+        {
+            bool selected = bottom;
+            var button = new Button { Content = PinTitle(bottom), Margin = new Thickness(0, 8, 0, 0), Padding = new Thickness(8) };
+            button.Click += (_, _) => { try { PackPins(selected); } catch (Exception ex) { Host.Error("better-packing", ex, true); } };
+            body.Children.Add(button);
         }
         var preferences = new Button { Content = "Packing preferences…", Margin = new Thickness(0,16,0,0), Padding = new Thickness(8) };
         preferences.Click += (_, _) => Preferences.Open("better-packing"); body.Children.Add(preferences);

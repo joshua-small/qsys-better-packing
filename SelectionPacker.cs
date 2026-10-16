@@ -7,7 +7,7 @@ namespace Designer.Modules.BetterPacking;
 
 internal static class SelectionPacker
 {
-    private sealed record Item(object Model, Point Position, Size Body, Size Drawn, bool IsInternalConnector);
+    private sealed record Item(object Model, object Graphic, Point Position, Size Body, Size Drawn, bool IsInternalConnector);
 
     // Normal 10.5 Schematic Elements > Layout entries, plus ordinary components.
     // Generic Graphic.Object also includes UCI controls and unreviewed object types.
@@ -65,7 +65,7 @@ internal static class SelectionPacker
             var drawn = (Size)HostSelection.RequiredProperty(graphic, "Size");
             if (graphicPosition != position || !PackingLayout.FootprintIsReady(body.Width, body.Height, drawn.Width, drawn.Height))
                 throw new InvalidOperationException("The drawn item geometry is not ready or uses a different coordinate space. Nothing moved.");
-            result.Add(new Item(model, position, body, drawn,
+            result.Add(new Item(model, graphic, position, body, drawn,
                 HostSelection.HostType("QSC.QSys.Design.ContainerPin").IsInstanceOfType(model)));
         }
         return result.ToArray();
@@ -93,6 +93,49 @@ internal static class SelectionPacker
     {
         try { return ReadItems(canvas).Length >= 2; }
         catch (Exception) { return false; }
+    }
+
+    private static PinPackingItem ReadPinItem(Item item, int id, bool exposed)
+    {
+        if (!Host.Type("QSC.QSys.Graphic.PinProvider").IsInstanceOfType(item.Graphic))
+            throw new ArgumentException("Pin packing supports components, connectors and Signal Snakes. Nothing moved.");
+        var offsets = new List<double>();
+        foreach (var graphicPin in ((IEnumerable)HostSelection.RequiredProperty(item.Graphic, "pins")).Cast<object>())
+        {
+            var pin = HostSelection.RequiredProperty(graphicPin, "InnerPin");
+            if (!item.IsInternalConnector && (bool)Host.Field(pin, "UserCreated") != exposed) continue;
+            var center = (Point)HostSelection.RequiredProperty(graphicPin, "CanvasCenter");
+            var local = (Point)HostSelection.RequiredProperty(pin, "Center");
+            // CanvasCenter falls back to local coordinates before the native visual is ready.
+            if (Math.Abs(center.X - item.Position.X - local.X) > 0.000001 || Math.Abs(center.Y - item.Position.Y - local.Y) > 0.000001)
+                throw new InvalidOperationException("Pin coordinates are not ready in this schematic canvas. Nothing moved.");
+            offsets.Add(center.Y - item.Position.Y);
+        }
+        return new(new(id, item.Position.X, item.Position.Y, item.Drawn.Width, item.Drawn.Height, item.IsInternalConnector), offsets);
+    }
+
+    internal static bool CanPackPinsOn(object canvas, bool exposed)
+    {
+        try
+        {
+            var items = ReadItems(canvas);
+            return items.Length >= 2 && items.Select((item, id) => ReadPinItem(item, id, exposed)).All(i => i.PinOffsetsY.Count > 0);
+        }
+        catch { return false; }
+    }
+
+    internal static string PackPins(bool bottom, bool exposed, int gap, Func<string, object, string> receipt, object? canvas = null)
+    {
+        var items = ReadItems(canvas);
+        var pins = items.Select((item, id) => ReadPinItem(item, id, exposed)).ToArray();
+        var plan = PinPackingLayout.Plan(pins, bottom, gap);
+        return HostSelection.ApplyPositions(plan.Select(p => (items[p.Id].Model, new Point(p.X, p.Y))).ToArray(), "pack-pins", new
+        {
+            bottom, pinGroup = exposed ? "exposed-control" : "main-component", gap,
+            alignment = "actual rendered pin centers; no electrical connection changes",
+            footprint = "full drawn bounds, including drawers", items = items.Select(Describe).ToArray(),
+            pinOffsets = pins.Select(p => new { id = p.Bounds.Id, p.PinOffsetsY }).ToArray()
+        }, "Packed selected items to " + (bottom ? "bottom" : "top") + " pins.", receipt);
     }
 
     internal static string Pack(PackAlignment alignment, int gap, Func<string, object, string> receipt,
