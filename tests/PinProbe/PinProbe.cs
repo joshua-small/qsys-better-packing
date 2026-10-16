@@ -14,7 +14,8 @@ namespace Designer.Modules.PinPackingLabProbe;
 public sealed class PinProbe : IDesignerModule
 {
     private record Config(string ApplicationDirectory, string Input, string InputHash, string Receipt,
-        string? SaveAs, bool CreateAndPack, bool GeometryEnabled, bool TestNested = false);
+        string? SaveAs, bool CreateAndPack, bool GeometryEnabled, bool TestNested = false,
+        int ExpectedConnectorCount = 11);
     private readonly Config? config;
     private DispatcherTimer? timer;
     private int attempts;
@@ -183,7 +184,9 @@ public sealed class PinProbe : IDesignerModule
 
             var models = Descendants(root);
             var connectors = models.Where(T("Design.ContainerPin").IsInstanceOfType).ToArray();
-            Require(connectors.Length == 11, "Expected six Container and five Channel Group internal connectors.");
+            // The nested fixture adds six connectors beyond the original eleven.
+            Require(config.ExpectedConnectorCount > 0 && connectors.Length == config.ExpectedConnectorCount,
+                $"Expected {config.ExpectedConnectorCount} internal connectors in the configured fixture.");
             Require(connectors.All(m => ((Size)P(m, "Size")).Height == 10 && (bool)P(m, "IsAttached")), "Connector height did not persist at 10.");
             var snapshots = connectors.Select(Snapshot).ToArray();
             var objects = Items(P(root, "AllChildren")).Where(T("Design.Object").IsInstanceOfType).Select(Snapshot).ToArray();
