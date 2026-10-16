@@ -11,11 +11,11 @@ using Designer.Modules.Common;
 namespace Designer.Modules.PinPackingLabProbe;
 
 // Never install this acceptance driver in regular Designer. Config is local test input.
-public sealed class PinProbe : IDesignerModule
+public sealed partial class PinProbe : IDesignerModule
 {
     private record Config(string ApplicationDirectory, string Input, string InputHash, string Receipt,
         string? SaveAs, bool CreateAndPack, bool GeometryEnabled, bool TestNested = false,
-        int ExpectedConnectorCount = 11);
+        int ExpectedConnectorCount = 11, bool Physical = false, bool PhysicalReopen = false, bool PhysicalResume = false);
     private readonly Config? config;
     private DispatcherTimer? timer;
     private int attempts;
@@ -93,6 +93,12 @@ public sealed class PinProbe : IDesignerModule
             var canvas = P(componentGraphic, "GraphicCanvas");
             var root = P(canvas, "Root");
             Require(Items(P(P(manager, "Document"), "Pages")).Contains(root), "Requires root schematic.");
+
+            if (config.Physical)
+            {
+                await StartPhysical(manager, root);
+                return;
+            }
 
             if (config.TestNested)
             {
