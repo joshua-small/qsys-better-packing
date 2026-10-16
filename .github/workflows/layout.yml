@@ -11,3 +11,22 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet run --project tests/PackingLayout.Tests.csproj
+  routing:
+    name: Windows routing
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: qsys-better-packing
+      - uses: actions/checkout@v7
+        with:
+          repository: joshua-small/qsys-mods-core
+          # Reviewed routing implementation; the coordinated 0.1.6 release changes its version only.
+          ref: de0e728ec42e1a537db3a91d5539e53ce384165a
+          path: qsys-mods-core
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: qsys-better-packing/global.json
+      - run: dotnet run --project tests/PackingCommands/PackingCommands.Tests.csproj -c Release
+        working-directory: qsys-better-packing

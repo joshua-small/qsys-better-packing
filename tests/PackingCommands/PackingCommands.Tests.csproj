@@ -8,7 +8,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../PackingCommandRouter.cs" Link="PackingCommandRouter.cs" />
+    <Compile Include="../../PackingContext.cs" Link="PackingContext.cs" />
+    <Compile Include="../../../qsys-mods-core/Core/ReplacementRouter.cs" Link="ReplacementRouter.cs" />
+    <Compile Include="../../../qsys-mods-core/Core/ControlPlan.cs" Link="ControlPlan.cs" />
+    <Compile Include="../../../qsys-mods-core/Core/ControlGestures.cs" Link="ControlGestures.cs" />
     <Compile Include="../../PackingLayout.cs" Link="PackingLayout.cs" />
   </ItemGroup>
 </Project>
