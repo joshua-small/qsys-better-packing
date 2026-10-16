@@ -52,3 +52,25 @@ checkpoint. Use a new `SaveAs` output and receipt; the checkpoint stays unchange
 `effectiveScale` records the canvas-to-window transform separately from the
 nested canvas's stored `CanvasScaleFactor`, which can differ from the visible
 zoom inherited from the root page.
+
+## Wire-type fixtures
+
+`WireKind` defaults to `Audio`. `Control` connects exposed Gain pins through the
+native Container and Channel Group connectors, retaining three wires in each
+of the three scopes. Every new connection must pass Designer's native `CanWire`
+check; the driver does not force domains or relax connection rules. Observations
+check and record both endpoint domains as well as identity and geometry.
+
+`AVH` creates AV Stream Routers and six native AV Stream wires across Container
+and nested Container. `Mediacast` creates Camera/MediaCast Routers and four valid
+connector wires in those two scopes. Designer rejects a MediaCast Router-to-Router
+chain; the driver records that rejection without creating the disallowed wire.
+The stationary-peer packing selection still moves one endpoint of each valid
+MediaCast connection. Video cases use main-pin anchors; the original Gain
+components remain unmodified. Channel Group's typed Audio/Control connectors
+are excluded from the video fixtures.
+
+Use the same `WireKind` when reopening or resuming a saved fixture. The expected
+wire count follows the selected fixture. Packing, save/reopen and receipt checks
+remain native API observations; they do not establish physical gestures at
+another Windows display scale or device/network streaming behavior.

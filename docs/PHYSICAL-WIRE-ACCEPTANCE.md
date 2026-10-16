@@ -44,6 +44,40 @@ The test observer was corrected to tolerate intentionally closed panels and to
 avoid undoing a prior edit when a pack is a no-op. Neither correction changed
 product code. Raw native receipts, test designs and vendor binaries remain local.
 
+## Additional wire types
+
+The same installed release payloads passed 40 further native packing operations
+at 100% Windows display scaling. Every fixture connection was accepted by
+Designer's native wiring rules before creation; no domain was forced or rule
+patched. These are programmatic packing and persistence checks, not additional
+physical drags.
+
+| Native wire domain | Fixture and scopes | Changed packing operations | Persisted wires |
+| --- | --- | ---: | ---: |
+| Control | Exposed Gain controls; Container, nested Container, Channel Group | 24 | 9 |
+| AVH (AV Stream video) | AV Stream Routers; Container and nested Container | 8 | 6 |
+| Mediacast | Camera/MediaCast Routers; Container and nested Container | 8 | 4 |
+
+Top/bottom operations covered all connected objects and selections with stationary
+connected peers. Control cases exercised main and exposed pin anchors; video
+cases used main pins. Each checked exact alignment, unchanged labels/sizes,
+endpoint identity, two-sided membership, nonempty rendered paths and one-step
+undo/redo. Across three separate saved designs, all 19 wire endpoint IDs,
+coordinates and domains matched after fresh-process reopen; all 19 rendered
+paths reached their pins. The source fixture and nine of ten recorded
+personal/vendor files stayed unchanged. The shared native `Prefs.xml` was
+rewritten during concurrent Designer activity; byte identity is not claimed for
+that file, and its current contents were preserved. No product fix, version bump
+or reinstall was needed.
+
+The native MediaCast rules reject a Router-output-to-Router-input chain. That
+rejection was observed and retained in both Container scopes; only the valid
+connector-to-Router wires were created. Channel Groups' native Audio/Control
+connector types were not converted to video. Earlier tracking's generic
+"network wire" label is clarified by the two concrete network-video domains
+above; the inspected host has no separate `Network` wiring-domain enum member.
+These observations do not establish device streaming or arbitrary network types.
+
 ## Exercised release identity and limits
 
 | Payload | SHA-256 |
@@ -52,9 +86,9 @@ product code. Raw native receipts, test designs and vendor binaries remain local
 | Compact Connectors 0.1.0 DLL | `09bcf491b5c7c80efa5c618f655ba1a88ec5193bd681d0ca27d29d37221d8dd6` |
 | Better Packing 0.2.2 DLL | `f3e1adada5544ca20458162917faf4e69680a88713a42ff7c1cd4abb9376571f` |
 
-Other Windows display scales, mixed-selection drag domains, native 12-unit
-connectors, broader component/pin counts, attached control/network/video wires,
-and the wider editor/load-order matrix are not established by this run. Existing
+Other Windows display scales, physical drags with the newly attached non-audio
+wires, mixed-selection drag domains, native 12-unit connectors, broader
+component/pin counts and the wider editor/load-order matrix remain unverified. Existing
 [packing acceptance](https://github.com/joshua-small/qsys-better-packing/issues/2)
 and [geometry integration tracking](https://github.com/joshua-small/qsys-automatic-geometry/issues/4)
 retain that residual scope. This is Designer geometry/connectivity evidence,

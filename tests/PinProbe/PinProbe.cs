@@ -15,7 +15,8 @@ public sealed partial class PinProbe : IDesignerModule
 {
     private record Config(string ApplicationDirectory, string Input, string InputHash, string Receipt,
         string? SaveAs, bool CreateAndPack, bool GeometryEnabled, bool TestNested = false,
-        int ExpectedConnectorCount = 11, bool Physical = false, bool PhysicalReopen = false, bool PhysicalResume = false);
+        int ExpectedConnectorCount = 11, bool Physical = false, bool PhysicalReopen = false, bool PhysicalResume = false,
+        string WireKind = "Audio");
     private readonly Config? config;
     private DispatcherTimer? timer;
     private int attempts;
