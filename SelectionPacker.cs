@@ -134,6 +134,8 @@ internal static class SelectionPacker
     {
         var items = ReadItems(canvas);
         var pins = items.Select((item, id) => ReadPinItem(item, id, exposed)).ToArray();
+        if (pins.Any(p => p.PinOffsetsY.Count == 0))
+            throw new ArgumentException("Every selected component needs visible " + (exposed ? "drawer" : "main") + " pins. Nothing moved.");
         var plan = PinPackingLayout.Plan(pins, bottom, gap);
         return HostSelection.ApplyPositions(plan.Select(p => (items[p.Id].Model, new Point(p.X, p.Y))).ToArray(), "pack-pins", new
         {

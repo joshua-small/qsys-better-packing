@@ -223,6 +223,39 @@ internal static class Program
         });
         Select(new QSC.QSys.Design.Component(), new QSC.QSys.Design.Component());
         Check("Disposal restores native routing", () => { router.Dispose(); Invoke(PackAlignment.Left, false); });
+        Check("Four explicit actions align main and drawer endpoints independently", () =>
+        {
+            Assert(PinPackingActions.All.Length == 4 && PinPackingActions.All.Select(a => a.Id).Distinct().Count() == 4);
+            Assert(PinPackingActions.All.Where(a => !a.Drawer).Select(a => a.Id).SequenceEqual(["better-packing/pins-top", "better-packing/pins-bottom"]));
+            foreach (var action in PinPackingActions.All)
+            {
+                var a = new QSC.QSys.Design.Component { Position = new(100, 100), Size = new(80, 28) };
+                var b = new QSC.QSys.Design.ContainerPin { Position = new(300, 100), Size = new(30, 10) };
+                var ga = new QSC.QSys.Graphic.PinProvider { obj = a, GraphicCanvas = canvas, Size = new(80, 60) };
+                var gb = new QSC.QSys.Graphic.PinProvider { obj = b, GraphicCanvas = canvas, Size = b.Size };
+                foreach (var (y, drawer) in new[] { (6, false), (16, false), (36, true), (46, true) })
+                    ga.pins.Add(new() { InnerPin = new() { Center = new(6, y), UserCreated = drawer }, CanvasCenter = new(106, 100 + y) });
+                gb.pins.Add(new() { InnerPin = new() { Center = new(6, 5) }, CanvasCenter = new(306, 105) });
+                HostSelection.Graphics = [ga, gb];
+                Assert(SelectionPacker.CanPackPinsOn(canvas, action.Drawer));
+                SelectionPacker.PackPins(action.Bottom, action.Drawer, 20, (_, _) => "receipt", canvas);
+                int offset = action.Drawer ? (action.Bottom ? 46 : 36) : (action.Bottom ? 16 : 6);
+                Assert(b.Position.Y + 5 == a.Position.Y + offset && b.Position.X == 200);
+            }
+        });
+        Check("Drawer commands refuse missing drawers without falling back to main pins", () =>
+        {
+            var a = new QSC.QSys.Design.Component { Position = new(100, 100), Size = new(80, 28) };
+            var b = new QSC.QSys.Design.ContainerPin { Position = new(300, 100), Size = new(30, 10) };
+            var ga = new QSC.QSys.Graphic.PinProvider { obj = a, GraphicCanvas = canvas, Size = a.Size };
+            var gb = new QSC.QSys.Graphic.PinProvider { obj = b, GraphicCanvas = canvas, Size = b.Size };
+            ga.pins.Add(new() { InnerPin = new() { Center = new(6, 6) }, CanvasCenter = new(106, 106) });
+            gb.pins.Add(new() { InnerPin = new() { Center = new(6, 5) }, CanvasCenter = new(306, 105) });
+            HostSelection.Graphics = [ga, gb]; int before = HostSelection.Operations;
+            Assert(SelectionPacker.CanPackPinsOn(canvas, false) && !SelectionPacker.CanPackPinsOn(canvas, true));
+            try { SelectionPacker.PackPins(true, true, 20, (_, _) => "receipt", canvas); Assert(false); } catch (ArgumentException) { }
+            Assert(HostSelection.Operations == before && a.Position == new Point(100, 100) && b.Position == new Point(300, 100));
+        });
         Console.WriteLine($"{passed} WPF packing integration checks passed (fixture host; no Designer acceptance).");
     }
 }

@@ -78,6 +78,23 @@ connector types were not converted to video. Earlier tracking's generic
 above; the inspected host has no separate `Network` wiring-domain enum member.
 These observations do not establish device streaming or arbitrary network types.
 
+## Owner feedback and follow-up candidate
+
+The owner subsequently tested Windows Display Scale, Application Zoom and Design
+Zoom and reported no effect. Exact values were not supplied, so this is
+owner-observed acceptance for the settings tried, not an exhaustive scale matrix.
+Repeating every display-scale combination is no longer a blocker without a
+specific regression. The owner also confirmed three concrete follow-ups: four
+explicit Main/Drawer pin actions, Undo/Redo while the Better Packing window has
+focus, and retention of connector corner snapping alongside pin snapping.
+
+The 0.3.0 Packing, 0.1.8 Core and 0.1.1 Compact Connectors source candidates address
+those changes. Unshown WPF and native geometry-solver tests are distinct from the
+earlier physical results above. Focused physical acceptance for the changed
+candidate remains pending while another chat uses the desktop. The Input x and
+Output x labels are created only by the disposable fixture driver; product hooks
+preserve native/custom/empty labels.
+
 ## Exercised release identity and limits
 
 | Payload | SHA-256 |

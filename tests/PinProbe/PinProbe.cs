@@ -365,7 +365,7 @@ public sealed partial class PinProbe : IDesignerModule
             }
             var core = AppDomain.CurrentDomain.GetAssemblies().Single(a => a.GetName().Name == "Qmm.mods-core.Runtime");
             var commands = Items(core.GetType("QsysMods.Core.Commands")!.GetProperty("All", Static)!.GetValue(null)!);
-            foreach (string id in new[] { "better-packing/pins-top", "better-packing/pins-bottom" })
+            foreach (string id in new[] { "better-packing/pins-top", "better-packing/pins-bottom", "better-packing/pins-drawer-top", "better-packing/pins-drawer-bottom" })
             {
                 Select(chosen); Keyboard.Focus((IInputElement)nestedCanvas);
                 var entry = commands.Single(c => (string)P(P(c,"Definition"),"Id") == id);
@@ -373,7 +373,7 @@ public sealed partial class PinProbe : IDesignerModule
                 Require(command.CanExecute(null, canvasElement), "Registered pin command disabled.");
                 command.Execute(null, canvasElement);
                 await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
-                var anchors = chosen.Select(m => Anchor(m, id.EndsWith("bottom"), false)).ToArray();
+                var anchors = chosen.Select(m => Anchor(m, id.EndsWith("bottom"), id.Contains("drawer"))).ToArray();
                 Require(anchors.All(y => Math.Abs(y-anchors[0]) < 0.00001), "Registered pin command did not align pins.");
                 Call(manager, "Undo"); Require(chosen.Select(m => (Point)P(m,"Position")).SequenceEqual(before), "Registered pin command undo failed.");
                 checks.Add(new { kind="registered-pin-command", id, owner=owner.GetType().FullName, anchors });
