@@ -172,4 +172,88 @@ Check("Connector policy follows sorted adjacency and preserves nonnegative valid
     Equal(100, result[0].Y); Equal(130, result[1].Y); Equal(242, result[2].Y);
     Reject(() => PackingLayout.Plan(shuffled, PackAlignment.Left, -1));
 });
+Check("Legacy preferences preserve gap and opt-out while supplying editor defaults", () =>
+{
+    var legacy = System.Text.Json.JsonSerializer.Deserialize<PackingSettings>("{\"Gap\":37,\"ReplaceDefaultPackBehavior\":false,\"ControlsManagedByCore\":true}")!;
+    legacy.Validate(); Equal(37, legacy.Gap);
+    if (legacy.ReplaceDefaultPackBehavior || !legacy.ControlsManagedByCore
+        || !PackingPolicy.UseBetter(legacy, PackingEditor.Schematic, [PackingElement.Component, PackingElement.Layout])
+        || PackingPolicy.UseBetter(legacy, PackingEditor.Uci, [PackingElement.Control])) throw new Exception("Legacy choices changed.");
+});
+Check("Defaults route every new category and mixed selection to native", () =>
+{
+    var settings = new PackingSettings();
+    foreach (var kind in Enum.GetValues<PackingElement>().Where(k => k is not PackingElement.Component and not PackingElement.Layout))
+    {
+        if (PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [kind, kind])
+            || PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [PackingElement.Component, kind])
+            || PackingPolicy.UseBetter(settings, PackingEditor.Uci, [kind, kind])) throw new Exception("A default captured native packing.");
+    }
+});
+Check("Editor and category choices are independent and survive JSON round-trip", () =>
+{
+    var settings = new PackingSettings { Schematic = new(Components: true, Headers: true), Uci = new(Controls: true, Images: true) };
+    settings = System.Text.Json.JsonSerializer.Deserialize<PackingSettings>(System.Text.Json.JsonSerializer.Serialize(settings))!;
+    if (!PackingPolicy.UseBetter(settings, PackingEditor.Uci, [PackingElement.Control, PackingElement.Image])
+        || PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [PackingElement.Control, PackingElement.Image])
+        || !PackingPolicy.UseBetter(settings, PackingEditor.Schematic, [PackingElement.Header, PackingElement.Component])
+        || PackingPolicy.UseBetter(settings, PackingEditor.Uci, [PackingElement.Control, PackingElement.Header])) throw new Exception("Editor choices leaked.");
+});
+Check("All-on cannot capture unknown objects, empty selections or control panels", () =>
+{
+    var all = new PackingElementOptions(true, true, true, true, true, true, true, true);
+    var settings = new PackingSettings { Schematic = all, Uci = all };
+    foreach (var editor in new[] { PackingEditor.Schematic, PackingEditor.Uci })
+    {
+        if (!PackingPolicy.UseBetter(settings, editor, PackingPolicy.Choices.Select(c => c.Element).ToArray())
+            || PackingPolicy.UseBetter(settings, editor, [PackingElement.Control, PackingElement.Unknown])
+            || PackingPolicy.UseBetter(settings, editor, [])) throw new Exception("Unknown selection was captured.");
+    }
+    if (PackingPolicy.UseBetter(settings, PackingEditor.Other, [PackingElement.Control, PackingElement.Control])) throw new Exception("Control panel was captured.");
+});
+Check("Invalid settings are rejected before publication", () =>
+{
+    Reject(() => new PackingSettings(-1).Validate());
+    Reject(() => new PackingSettings(10001).Validate());
+    Reject(() => (new PackingSettings { Schematic = null! }).Validate());
+    Reject(() => (new PackingSettings { Uci = null! }).Validate());
+});
+Check("Adding center overrides preserves the old four-direction all-off migration", () =>
+{
+    var off = new[] { "left", "right", "top", "bottom" }.ToDictionary(d => "better-packing/replace-" + d, _ => false);
+    if (PackingPolicy.LegacyOverridesEnabled(new(), off)
+        || PackingPolicy.LegacyOverridesEnabled(new(ReplaceDefaultPackBehavior: false), new Dictionary<string, bool>()))
+        throw new Exception("Legacy opt-out was lost.");
+    off["better-packing/replace-top"] = true;
+    if (!PackingPolicy.LegacyOverridesEnabled(new(), off)
+        || !PackingPolicy.LegacyOverridesEnabled(new(), new Dictionary<string, bool>())) throw new Exception("Default behavior changed.");
+});
+Check("Offset polygon bounds keep visible gaps and alignment on the host position grid", () =>
+{
+    PackingItem[] shapes = [new(0, 100, 100, 80, 40, OffsetX: 12.25, OffsetY: -20.75),
+        new(1, 300, 300, 60, 50, OffsetX: -10.5, OffsetY: 7.5)];
+    foreach (var alignment in Enum.GetValues<PackAlignment>())
+    {
+        var result = PackingLayout.Plan(shapes, alignment, 37);
+        bool row = PackingLayout.IsHorizontalRow(alignment);
+        var a = shapes[result[0].Id]; var b = shapes[result[1].Id];
+        var gap = row ? result[1].X + b.OffsetX - result[0].X - a.OffsetX - a.Width
+            : result[1].Y + b.OffsetY - result[0].Y - a.OffsetY - a.Height;
+        if (gap < 37 || gap >= 38) throw new Exception("Polygon visible gap differs.");
+        var before = shapes.Select(i => row ? i.Y + i.OffsetY : i.X + i.OffsetX).ToArray();
+        var sizes = shapes.Select(i => row ? i.Height : i.Width).ToArray();
+        double anchor = alignment is PackAlignment.Left or PackAlignment.Top ? before.Min()
+            : alignment is PackAlignment.Right or PackAlignment.Bottom ? before.Zip(sizes, (p, s) => p + s).Max()
+            : before.Zip(sizes, (p, s) => p + s / 2).Average();
+        foreach (var p in result)
+        {
+            var item = shapes[p.Id]; var start = row ? p.Y + item.OffsetY : p.X + item.OffsetX;
+            var size = row ? item.Height : item.Width;
+            var edge = start + (alignment is PackAlignment.Left or PackAlignment.Top ? 0
+                : alignment is PackAlignment.Right or PackAlignment.Bottom ? size : size / 2);
+            if (Math.Abs(edge - anchor) > .5) throw new Exception("Polygon alignment exceeded host rounding.");
+        }
+    }
+    Reject(() => PackingLayout.Plan([shapes[0] with { OffsetX = double.NaN }, shapes[1]], PackAlignment.Left, 37));
+});
 Console.WriteLine($"{passed} packing contract checks passed.");
