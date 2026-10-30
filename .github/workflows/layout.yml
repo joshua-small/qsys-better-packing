@@ -12,6 +12,7 @@ jobs:
           global-json-file: global.json
       - run: dotnet run --project tests/PackingLayout.Tests.csproj
       - run: dotnet run --project tests/PinPacking/PinPacking.Tests.csproj
+      - run: dotnet run --project tests/Transpose/Transpose.Tests.csproj -c Release
   routing:
     name: Windows routing
     runs-on: windows-latest
@@ -22,12 +23,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: joshua-small/qsys-mods-core
-          # Reviewed routing implementation; the coordinated 0.1.6 release changes its version only.
-          ref: de0e728ec42e1a537db3a91d5539e53ce384165a
+          # Released Core 0.1.10, matching the transpose package dependency.
+          ref: b046960b250fe41285b4612913cf32dfb532b16c
           path: qsys-mods-core
           persist-credentials: false
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: qsys-better-packing/global.json
       - run: dotnet run --project tests/PackingCommands/PackingCommands.Tests.csproj -c Release
+        working-directory: qsys-better-packing
+      - run: dotnet run --project tests/TransposeCommands/TransposeCommands.Tests.csproj -c Release
         working-directory: qsys-better-packing

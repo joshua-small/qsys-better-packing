@@ -1,6 +1,6 @@
 # Text Controller grid transpose
 
-The **Preview Text Controller Transpose…** action is a prototype for a rectangular
+The **Preview Text Controller Transpose…** action supports a rectangular
 selection on a schematic. Open it in the Better Packing window, or assign its
 command through Mods Core. No shortcut is assigned by default. Native Pack
 routing and the per-editor category preferences are independent of this action.
@@ -49,7 +49,7 @@ Only their positions change; controls are neither rotated nor recreated.
   names, mixed controllers, unrelated objects, hidden/locked/detached items,
   unavailable geometry and unsupported coordinate spaces reject the whole action.
   UCI editors, component panels, control-definition objects and arbitrary grids
-  are outside this prototype.
+  are outside this command's supported scope.
 
 ## Preview, apply and cancellation
 
@@ -85,11 +85,25 @@ dotnet run --project tests/TransposeCommands/TransposeCommands.Tests.csproj -c R
 ```
 
 The second command requires Windows and WPF; neither test requires vendor DLLs.
-These tests and a successful product build do not establish Designer acceptance.
-Native selection, copied-label recognition, preview rendering, input routing,
-one-step Undo/Redo and saved-file round trips still require scoped checks against
-the exact candidate bytes before this prototype is promoted for release. Record
-Designer 10.5 and 10.5.1 results separately. A successful build using 10.5.1
-reference assemblies is not application acceptance on either version. Core
-0.1.10's exact-build opt-in only permits startup on an untested host; it does not
-establish this feature's compatibility.
+The automated suites contain 125 checks across packing, pins, routing and
+transpose. They are distinct from application acceptance.
+
+The 0.4.0 module passed 92 bounded native assertions on Designer 10.5.0 with Core
+0.1.10. These cover copied-label and control recognition, rendered preview,
+Cancel/Escape/close, physical Apply and one-step Undo/Redo, identity and binding
+preservation, native Pack separation, stale/rejection cases, nested schematics,
+and separate save/reopen. Fresh-process checks compare persisted semantic
+records; process-local object references are not persistent identifiers.
+
+With Core 0.1.11, 16 additional assertions checked rendered tooltips, stale-session
+rejection after a plain design replacement and a fractional-property probe. All
+twelve items in that probe settled to integer drawn bounds. Fractional drawn-size
+acceptance is therefore not demonstrated, although the pure planner tests cover
+fractional sizes. Those additional assertions do not establish full acceptance.
+
+Designer 10.5.1 and an editable custom component-panel GUI remain unverified.
+The first controlled same-process replacement of a UCI-containing design exited
+before Apply; its cause remains unresolved. The later plain-design replacement
+passed and does not establish that earlier case. No connected Core or hardware
+behavior is claimed. Core's exact-build opt-in permits startup on an untested
+host; it does not establish feature compatibility.

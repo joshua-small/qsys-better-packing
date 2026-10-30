@@ -1,6 +1,6 @@
 # Better Packing
 
-The **0.4.0 source candidate** includes a **Text Controller transpose prototype**:
+Version **0.4.0** adds **Text Controller grid transpose**:
 preview a complete rectangular grid from one controller, then turn family rows
 into columns with one position-only operation. [Scope, use and validation
 limits](docs/TEXT-CONTROLLER-TRANSPOSE.md).
@@ -34,13 +34,14 @@ Migration preserves a saved legacy opt-out or a previous all-off selection. A pa
 
 Version **0.3.0** requires [Q-SYS Mods Core](https://github.com/joshua-small/qsys-mods-core) **0.1.8 or newer within 0.1.x** for operation-window undo/redo. Publication requires the new disjoint catalog range; existing 0.1.x/0.2.x package policies and pins remain immutable. Better Shortcuts remains optional. Use Mod Manager 0.8+ and its bundle migration; do not enable beside Schematic Tools 0.16 or earlier.
 
-The **0.4.0 candidate** is built against released Mods Core **0.1.10** and requires
-that version or newer within 0.1.x. Its proposed catalog range retains the single
-module payload and conflict with Schematic Tools before 0.17. On an untested
+Version **0.4.0** requires Mods Core **0.1.10 or newer within 0.1.x**. Its package
+contains one module and conflicts with Schematic Tools before 0.17. On an untested
 Designer build, Core 0.1.10 and Q-SYS Mod Manager 0.10.0 support consent tied to the
 installation's exact Designer files. That permits startup; it does not establish
-transpose compatibility. Designer 10.5 and 10.5.1 require separate feature
-acceptance. The transpose's native checks remain pending for this candidate.
+transpose compatibility. Bounded native checks passed on Designer 10.5.0 for
+recognition, preview/cancellation, position-only Apply, physical Undo/Redo,
+rejection/stale guards and separate save/reopen. Designer 10.5.1, fractional
+drawn sizes and an editable custom component panel remain unverified.
 
 ## Pin-aligned packing
 
