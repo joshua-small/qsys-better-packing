@@ -256,6 +256,41 @@ internal static class Program
             try { SelectionPacker.PackPins(true, true, 20, (_, _) => "receipt", canvas); Assert(false); } catch (ArgumentException) { }
             Assert(HostSelection.Operations == before && a.Position == new Point(100, 100) && b.Position == new Point(300, 100));
         });
+        Check("Every pin action rejects nonfinite selected-pin coordinates before movement", () =>
+        {
+            foreach (var action in PinPackingActions.All)
+            foreach (bool horizontal in new[] { true, false })
+            foreach (var invalid in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+            foreach (var field in new[] { "rendered", "local", "both" })
+            {
+                canvas.Editor = PackingEditor.Schematic;
+                var a = new QSC.QSys.Design.Component { Position = new(100, 100), Size = new(80, 60) };
+                var b = new QSC.QSys.Design.ContainerPin { Position = new(300, 100), Size = new(30, 10) };
+                var ga = new QSC.QSys.Graphic.PinProvider { obj = a, GraphicCanvas = canvas, Size = a.Size };
+                var gb = new QSC.QSys.Graphic.PinProvider { obj = b, GraphicCanvas = canvas, Size = b.Size };
+                var local = new Point(6, 6);
+                var rendered = new Point(106, 106);
+                if (field is "local" or "both")
+                    local = horizontal ? new(invalid, local.Y) : new(local.X, invalid);
+                if (field is "rendered" or "both")
+                    rendered = horizontal ? new(invalid, rendered.Y) : new(rendered.X, invalid);
+                ga.pins.Add(new() { InnerPin = new() { Center = local, UserCreated = action.Drawer }, CanvasCenter = rendered });
+                gb.pins.Add(new() { InnerPin = new() { Center = new(6, 5) }, CanvasCenter = new(306, 105) });
+                HostSelection.Graphics = [ga, gb];
+                int before = HostSelection.Operations, receipts = 0;
+                var positions = HostSelection.Graphics.Select(g => g.obj.Position).ToArray();
+                var bindings = HostSelection.Graphics.Select(g => g.obj.Binding).ToArray();
+                bool ready = SelectionPacker.CanPackPinsOn(canvas, action.Drawer), rejected = false;
+                try { SelectionPacker.PackPins(action.Bottom, action.Drawer, 20, (_, _) => { receipts++; return "receipt"; }, canvas); }
+                catch (InvalidOperationException) { rejected = true; }
+                if (ready || !rejected || HostSelection.Operations != before || receipts != 0)
+                    throw new Exception($"Invalid pin accepted by {action.Id}: axis={(horizontal ? "X" : "Y")}, "
+                        + $"field={field}, value={invalid}, ready={ready}, rejected={rejected}, "
+                        + $"operations={HostSelection.Operations - before}, receipts={receipts}");
+                Assert(positions.SequenceEqual(HostSelection.Graphics.Select(g => g.obj.Position))
+                    && bindings.SequenceEqual(HostSelection.Graphics.Select(g => g.obj.Binding)));
+            }
+        });
         Console.WriteLine($"{passed} WPF packing integration checks passed (fixture host; no Designer acceptance).");
     }
 }

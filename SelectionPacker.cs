@@ -113,7 +113,8 @@ internal static class SelectionPacker
             if (!item.IsInternalConnector && (bool)Host.Field(pin, "UserCreated") != exposed) continue;
             var center = (Point)HostSelection.RequiredProperty(graphicPin, "CanvasCenter");
             var local = (Point)HostSelection.RequiredProperty(pin, "Center");
-            if (Math.Abs(center.X - item.Position.X - local.X) > 0.000001 || Math.Abs(center.Y - item.Position.Y - local.Y) > 0.000001)
+            if (!PinPackingLayout.PinCoordinateIsReady(center.X, item.Position.X, local.X)
+                || !PinPackingLayout.PinCoordinateIsReady(center.Y, item.Position.Y, local.Y))
                 throw new InvalidOperationException("Pin coordinates are not ready in this schematic canvas. Nothing moved.");
             offsets.Add(center.Y - item.Position.Y);
         }

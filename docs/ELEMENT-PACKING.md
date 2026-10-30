@@ -56,11 +56,9 @@ second native action.
 
 ## Evidence and remaining checks
 
-The host type/geometry observations were inspected statically in the supported
-Designer 10.5 assembly. `Design.Object.Position` uses the host undo-aware setter;
-`ControlStyle.Position` delegates to that base implementation. `Graphic.Object`
-supplies the model identity and lock/visibility properties used by the reader.
-No vendor binary or decompiled source is included in this repository.
+The selection reader checks object identities, drawn geometry, locks and
+visibility before planning. Position changes use the host's grouped transaction
+helper so the selection can be restored with one Undo.
 [Q-SYS Help documents the native Pack operations](https://help.qsys.com/Content/Q-SYS_Designer/Using_the_Schematic/Labeling_and_Organizing_Schematic_Elements.htm).
 
 The automated suites exercise the production policy/reader/planner against

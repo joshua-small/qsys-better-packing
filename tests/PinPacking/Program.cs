@@ -42,4 +42,30 @@ Check("Invalid selection and gap retain existing refusal rules", () => {
     Reject(()=>PinPackingLayout.Plan([items[0],items[0]],false,20));
     Reject(()=>PinPackingLayout.Plan(items,false,-1));
 });
+Check("Rendered pin coordinates must be finite in every coordinate space", () => {
+    foreach (var invalid in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+    {
+        if (PinPackingLayout.PinCoordinateIsReady(invalid, 100, 6)
+            || PinPackingLayout.PinCoordinateIsReady(106, invalid, 6)
+            || PinPackingLayout.PinCoordinateIsReady(106, 100, invalid)
+            || PinPackingLayout.PinCoordinateIsReady(invalid, 100, invalid))
+            throw new Exception("Nonfinite pin geometry was accepted.");
+    }
+});
+Check("Pin coordinate checks retain finite offsets and rounding tolerance", () => {
+    foreach (var (position, offset) in new[] { (100.0, 6.0), (100.0, -6.0), (0.0, 0.0), (100.0, 6.25) })
+    {
+        var center = position + offset;
+        foreach (var noise in new[] { -0.0000005, 0, 0.0000005 })
+            if (!PinPackingLayout.PinCoordinateIsReady(center + noise, position, offset))
+                throw new Exception("Valid rendered pin geometry was rejected.");
+        foreach (var shift in new[] { -1.0, -0.000002, 0.000002, 1.0 })
+            if (PinPackingLayout.PinCoordinateIsReady(center + shift, position, offset))
+                throw new Exception("Stale rendered pin geometry was accepted.");
+    }
+});
+Check("Finite coordinate arithmetic overflow is rejected", () => {
+    if (PinPackingLayout.PinCoordinateIsReady(double.MaxValue, -double.MaxValue, 0))
+        throw new Exception("Unrepresentable coordinate difference was accepted.");
+});
 Console.WriteLine($"{passed} pin packing checks passed.");

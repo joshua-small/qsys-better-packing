@@ -1,5 +1,10 @@
 # Better Packing
 
+Version **0.4.0** adds **Text Controller grid transpose**:
+preview a complete rectangular grid from one controller, then turn family rows
+into columns with one position-only operation. [Scope, use and validation
+limits](docs/TEXT-CONTROLLER-TRANSPOSE.md).
+
 Pack schematic and UCI elements with a saved gap. Component packing accounts for exposed control-pin footprints, connector adjacency, and host rounding. All six operations are available through the native Pack commands and **Tools > Q-SYS Mods > Better Packing**.
 
 **File > Preferences > Better Packing** stores Gap (default **20**, whole numbers 0–10000) and separate **Native / Better Packing** choices for each element category in the Schematic and UCI editors. The same gap is used in both editors and for both axes.
@@ -29,11 +34,23 @@ Migration preserves a saved legacy opt-out or a previous all-off selection. A pa
 
 Version **0.3.0** requires [Q-SYS Mods Core](https://github.com/joshua-small/qsys-mods-core) **0.1.8 or newer within 0.1.x** for operation-window undo/redo. Publication requires the new disjoint catalog range; existing 0.1.x/0.2.x package policies and pins remain immutable. Better Shortcuts remains optional. Use Mod Manager 0.8+ and its bundle migration; do not enable beside Schematic Tools 0.16 or earlier.
 
+Version **0.4.0** requires Mods Core **0.1.10 or newer within 0.1.x**. Its package
+contains one module and conflicts with Schematic Tools before 0.17. On an untested
+Designer build, Core 0.1.10 and Q-SYS Mod Manager 0.10.0 support consent tied to the
+installation's exact Designer files. That permits startup; it does not establish
+transpose compatibility. Bounded native checks passed on Designer 10.5.0 for
+recognition, preview/cancellation, position-only Apply, physical Undo/Redo,
+rejection/stale guards and separate save/reopen. Focused checks also passed on
+Designer 10.5.1 for preview/Cancel, Apply, physical Undo/Redo, native UCI selection
+rejection and fresh-process persistence. Fractional drawn sizes and an editable
+custom component panel remain unverified. Fractional size requests settled to
+whole-unit drawn bounds on both tested Designer versions.
+
 ## Pin-aligned packing
 
 Four actions align selected objects by actual rendered pin centers: **Pack to Top Main Pins**, **Pack to Bottom Main Pins**, **Pack to Top Drawer Pins**, and **Pack to Bottom Drawer Pins**. They appear in the Better Packing window and have separate Core shortcut entries with no default keys. They apply only to schematic components, connectors and Signal Snakes, including nested schematics.
 
-Items form a horizontal row using full drawn widths and the saved Gap. Adjacent internal connectors remain flush. Main actions use the main component pins; Drawer actions use exposed control pins. Internal connectors retain their sole pin in either group. A selected component without the requested visible pins is rejected before mutation, as are stale coordinates and positions that cannot preserve exact alignment. This fixes the one-unit alignment difference between a compact connector's 5-unit center and a component's 6-unit first pin without guessing offsets.
+Items form a horizontal row using full drawn widths and the saved Gap. Adjacent internal connectors remain flush. Main actions use the main component pins; Drawer actions use exposed control pins. Internal connectors retain their sole pin in either group. A selected component without the requested visible pins is rejected before mutation, as are stale or nonfinite coordinates and positions that cannot preserve exact alignment. Both horizontal and vertical pin coordinates must be ready, even though pins determine only vertical alignment. This fixes the one-unit alignment difference between a compact connector's 5-unit center and a component's 6-unit first pin without guessing offsets.
 
 The former global main/drawer checkbox is removed. Existing `pins-top` and `pins-bottom` shortcut identities now explicitly name Main pins; the two Drawer commands have new identities. The legacy stored preference is preserved when saving settings but no longer selects a command's pin group. Other shortcuts and packing preferences are unchanged.
 
@@ -47,15 +64,16 @@ Clone Core beside this repository. Build with .NET 10.0.112 and local references
 ```text
 dotnet build Designer.Modules.BetterPacking.csproj -c Release -p:DesignerDir="C:\Program Files\QSC\Q-SYS Designer 10.5"
 dotnet run --project tests/PackingLayout.Tests.csproj
+dotnet run --project tests/PinPacking/PinPacking.Tests.csproj
 ```
 
-`tests/PackingLayout.Tests.csproj` runs 25 checks covering geometry, category policy, settings migration and serialization. `tests/PackingCommands` runs 26 checks in an unshown Windows WPF tree against the production selection reader, planner, preference matrix and shared Core router, using explicit fixture host objects. These tests cover native fallback, mixed selections, opted-in schematic/UCI geometry, locks, control-tool mode, cancellation of a preference draft and operation failure without fallthrough. Build in WSL and run the WPF test DLL with Windows .NET; the fixture does not launch Designer. Clone Core alongside this repo to build it. `tests/LayoutProbe` retains the scoped, disposable Designer geometry probe; it requires separate local fixtures.
+`tests/PackingLayout.Tests.csproj` runs 25 checks covering geometry, category policy, settings migration and serialization. `tests/PinPacking` runs 13 portable checks of pin alignment and coordinate validation, including nonfinite coordinates, stale positions, finite rounding tolerance and arithmetic overflow. These two suites need no vendor DLLs. `tests/PackingCommands` runs 27 checks in an unshown Windows WPF tree against the production selection reader, planner, preference matrix and shared Core router, using explicit fixture host objects. These tests cover native fallback, mixed selections, opted-in schematic/UCI geometry, locks, control-tool mode, cancellation of a preference draft and operation failure without fallthrough. Its nonfinite-pin matrix exercises all four pin actions on both axes and verifies no movement, binding change or operation receipt. Build in WSL and run the WPF test DLL with Windows .NET; the fixture does not launch Designer. Clone Core alongside this repo to build it. `tests/LayoutProbe` retains the scoped, disposable Designer geometry probe; it requires separate local fixtures.
 
 For 0.2.1, 86 assertions in an isolated Designer 10.5 copy checked the new graphic families and component-bound controls on schematic/UCI canvases in all six directions, visible gaps, unchanged bindings/vertices, undo/redo, preference defaults/Cancel/OK/reopen, and all six real routed schematic commands using native zero gaps or opted-in gaps. The disposable design was saved and reopened with matching contents/bindings/vertices, and preferences persisted across a fresh process. These are native API/routed-command checks; normal UCI menu/key input, center-key migration, broader mixed/nested/floating contexts and the expanded master switch still need scoped application acceptance. [Evidence and limits](docs/ELEMENT-PACKING.md). The Alt + right-drag gap HUD and broader object coverage remain future work tracked in [issue #2](https://github.com/joshua-small/qsys-better-packing/issues/2).
 
 On 2026-10-14, matching 0.1.3 builds were checked in Designer 10.5 on a disposable two-component schematic. Ctrl+Shift+L/R/T/B each executed Better Packing once with Gap 20; operation receipts confirmed the final positions and each operation was undone. With the opt-out enabled, Ctrl+Shift+L used Q-SYS's zero-gap packing; disabling the opt-out restored Better Packing. Better Shortcuts showed one assigned row per direction and the selected provider. Clear/Reset, saving/reopening, and cancelling a staged opt-out were checked. The test insertions were undone and default overrides restored. UCI passthrough, menu/context-menu paths, invalid selections and the wider editor matrix remain tracked in [issue #2](https://github.com/joshua-small/qsys-better-packing/issues/2).
 
-Feature source originated in `joshua-small/qsys-schematic-tools` commit `13c52e6`; public source contains no vendor binaries or decompiled implementation. [Split tracking](https://github.com/joshua-small/qsys-schematic-tools/issues/4).
+Feature source originated in `joshua-small/qsys-schematic-tools` commit `13c52e6`. [Split tracking](https://github.com/joshua-small/qsys-schematic-tools/issues/4).
 
 ## Geometry update acceptance (2026-10-16)
 

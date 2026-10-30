@@ -4,6 +4,10 @@ internal sealed record PinPackingItem(PackingItem Bounds, IReadOnlyList<double> 
 
 internal static class PinPackingLayout
 {
+    internal static bool PinCoordinateIsReady(double canvasCenter, double itemPosition, double localCenter) =>
+        double.IsFinite(canvasCenter) && double.IsFinite(itemPosition) && double.IsFinite(localCenter)
+        && Math.Abs(canvasCenter - itemPosition - localCenter) <= 0.000001;
+
     // Full drawn widths determine spacing. Pin centers determine only the row's vertical alignment.
     internal static PackedPosition[] Plan(IReadOnlyList<PinPackingItem> items, bool bottom, int gap)
     {

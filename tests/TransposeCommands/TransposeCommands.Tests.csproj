@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><EnableWindowsTargeting>true</EnableWindowsTargeting><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../TransposeLayout.cs" Link="TransposeLayout.cs" />
+    <Compile Include="../../TextControllerSelection.cs" Link="TextControllerSelection.cs" />
+    <Compile Include="../../PackingLayout.cs" Link="PackingLayout.cs" />
+    <Compile Include="../../../qsys-mods-core/Core/HostSelection.cs" Link="HostSelection.cs" />
+  </ItemGroup>
+</Project>

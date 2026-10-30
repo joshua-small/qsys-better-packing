@@ -58,6 +58,9 @@ public sealed class PackingModule : ModModule
                 }, canvas => Pack(selected, canvas, "native-command: " + command.Name));
         }
         Commands.Register(new("better-packing/window", "Better Packing…", "Better Packing", Show, () => true, InMenu: true));
+        Commands.Register(new("better-packing/transpose-text-controller", "Preview Text Controller Transpose…", "Better Packing",
+            PreviewTranspose, () => ReadContext(main).Focus == PackingFocus.Schematic && Host.Enabled)
+            { When = "Schematic canvas; complete Text Controller rows with labels" });
         foreach (var action in PinPackingActions.All)
         {
             Commands.Register(new(action.Id, action.Title, "Better Packing",
@@ -90,9 +93,20 @@ public sealed class PackingModule : ModModule
             button.Click += (_, _) => { try { PackPins(action); } catch (Exception ex) { Host.Error("better-packing", ex, true); } };
             body.Children.Add(button);
         }
+        var transpose = new Button { Content = "Preview Text Controller Transpose…", Margin = new Thickness(0, 16, 0, 0), Padding = new Thickness(8) };
+        transpose.Click += (_, _) => PreviewTranspose(); body.Children.Add(transpose);
         var preferences = new Button { Content = "Packing preferences…", Margin = new Thickness(0,16,0,0), Padding = new Thickness(8) };
         preferences.Click += (_, _) => Preferences.Open("better-packing"); body.Children.Add(preferences);
         operation.Content = body; operation.Closed += (_, _) => operation = null; operation.Show();
+    }
+    private void PreviewTranspose()
+    {
+        try
+        {
+            using var session = new TransposeSession(() => settings!.Value.Gap);
+            new TransposePreview(session, operation ?? Application.Current.MainWindow).ShowDialog();
+        }
+        catch (Exception error) { Host.Error("better-packing", error, true); }
     }
     private static PackingCommandContext ReadContext(Window window)
     {
