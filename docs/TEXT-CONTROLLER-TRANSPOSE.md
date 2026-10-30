@@ -102,8 +102,12 @@ acceptance is therefore not demonstrated, although the pure planner tests cover
 fractional sizes. Those additional assertions do not establish full acceptance.
 
 Designer 10.5.1 and an editable custom component-panel GUI remain unverified.
-The first controlled same-process replacement of a UCI-containing design exited
-before Apply; its cause remains unresolved. The later plain-design replacement
-passed and does not establish that earlier case. No connected Core or hardware
-behavior is claimed. Core's exact-build opt-in permits startup on an untested
-host; it does not establish feature compatibility.
+A controlled same-process replacement of a UCI-containing design exited with
+Better Packing both present and absent, using the same fixture bytes and native
+replacement operation. Neither comparison run retained a transpose session.
+This reproduces the exit without Better Packing; other modules remained loaded,
+so it does not establish an unmodified Designer baseline or identify the cause.
+That native replacement route remains outside accepted coverage. The separate
+plain-design stale-preview check passed. No connected Core or hardware behavior
+is claimed. Core's exact-build opt-in permits startup on an untested host; it
+does not establish feature compatibility.
