@@ -101,7 +101,18 @@ twelve items in that probe settled to integer drawn bounds. Fractional drawn-siz
 acceptance is therefore not demonstrated, although the pure planner tests cover
 fractional sizes. Those additional assertions do not establish full acceptance.
 
-Designer 10.5.1 and an editable custom component-panel GUI remain unverified.
+The same 0.4.0 module passed 27 focused checks on Designer 10.5.1 with Core 0.1.11.
+These cover loaded module identities, rendered Preview/Cancel, position-only
+Apply with the saved 20-unit gap, physical Undo/Redo, the native UCI selection
+guard, and saving and reopening the applied result in a fresh process. Geometry,
+control bindings, sizes and styles persisted with clean, empty history. The UCI
+check exercised the production reader on a real UCI selection; it was not a
+physical UCI command invocation, and it preserved the existing model and history.
+All twelve fractional-size requests again settled to whole-unit drawn bounds
+(76 by 33, 77 by 34 and 78 by 35); the reader used those actual dimensions, and
+Undo restored the fixture. Fractional drawn-size acceptance remains unverified.
+
+An editable custom component-panel GUI remains unverified.
 A controlled same-process replacement of a UCI-containing design exited with
 Better Packing both present and absent, using the same fixture bytes and native
 replacement operation. Neither comparison run retained a transpose session.

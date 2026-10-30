@@ -40,8 +40,11 @@ Designer build, Core 0.1.10 and Q-SYS Mod Manager 0.10.0 support consent tied to
 installation's exact Designer files. That permits startup; it does not establish
 transpose compatibility. Bounded native checks passed on Designer 10.5.0 for
 recognition, preview/cancellation, position-only Apply, physical Undo/Redo,
-rejection/stale guards and separate save/reopen. Designer 10.5.1, fractional
-drawn sizes and an editable custom component panel remain unverified.
+rejection/stale guards and separate save/reopen. Focused checks also passed on
+Designer 10.5.1 for preview/Cancel, Apply, physical Undo/Redo, native UCI selection
+rejection and fresh-process persistence. Fractional drawn sizes and an editable
+custom component panel remain unverified. Fractional size requests settled to
+whole-unit drawn bounds on both tested Designer versions.
 
 ## Pin-aligned packing
 
